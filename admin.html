@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrapYard - System Administration</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    
+    <style>
+        :root[data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+        }
+        :root[data-theme="light"] {
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #0284c7;
+            --accent-glow: rgba(2, 132, 199, 0.1);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: background 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 25px var(--accent-glow);
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="pb-24 max-w-4xl mx-auto relative overflow-x-hidden md:p-6 md:pb-28">
+
+    <header class="glass-panel sticky top-0 z-50 px-4 py-4 flex justify-between items-center rounded-b-2xl md:rounded-2xl mx-2 mt-2 shadow-lg">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black tracking-tight">ScrapYard Admin</h1>
+                <p class="text-[10px] uppercase font-mono tracking-widest text-slate-400" style="color: var(--text-muted)">Ecosystem Management Console</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span> System Live
+            </div>
+            <button id="themeToggle" class="p-2.5 rounded-xl glass-panel text-slate-400 hover:text-sky-400 transition-all active:scale-95">
+                <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="px-4 pt-6 min-h-[calc(100vh-180px)]">
+        
+        <section id="dashboardView" class="space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-2xl">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Total Treasury Volume</p>
+                    <p id="dashTotalVolume" class="text-xl font-black mt-1">$0.00</p>
+                    <span class="text-[9px] text-emerald-400 font-mono flex items-center gap-0.5 mt-1"><i data-lucide="trending-up" class="w-3 h-3"></i> Live Sync</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Ecosystem Gas Pool</p>
+                    <p id="dashBnbPool" class="text-xl font-black mt-1 text-amber-400">0.000 BNB</p>
+                    <span class="text-[9px] text-slate-400 font-mono block mt-1" style="color: var(--text-muted)">Firestore Sync</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Monitored Users</p>
+                    <p id="dashTotalUsers" class="text-xl font-black mt-1">0</p>
+                    <span class="text-[9px] text-rose-400 font-mono block mt-1"><span id="dashFlaggedUsers">0</span> Flagged</span>
+                </div>
+                <div class="glass-panel p-4 rounded-2xl">
+                    <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Active Curated Pairs</p>
+                    <p id="dashTotalPairs" class="text-xl font-black mt-1">0</p>
+                    <span class="text-[9px] text-sky-400 font-mono block mt-1">Real-time Updated</span>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-5 space-y-4">
+                <h3 class="text-sm font-bold tracking-wider text-slate-400 uppercase" style="color: var(--text-muted)">Quick Administration Pipelines</h3>
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <button onclick="openModal('addTokenModal')" class="flex items-center gap-3 p-4 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 transition-all text-left">
+                        <i data-lucide="plus-circle" class="w-5 h-5 shrink-0"></i>
+                        <div><p class="text-xs font-black">List New Coin</p><p class="text-[9px] opacity-70">Add contract metadata</p></div>
+                    </button>
+                    <button onclick="openModal('broadcastModal')" class="flex items-center gap-3 p-4 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 transition-all text-left">
+                        <i data-lucide="megaphone" class="w-5 h-5 shrink-0"></i>
+                        <div><p class="text-xs font-black">Broadcast Alert</p><p class="text-[9px] opacity-70">Push notifications</p></div>
+                    </button>
+                    <button onclick="switchTab('store')" class="col-span-2 sm:col-span-1 flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-all text-left">
+                        <i data-lucide="database" class="w-5 h-5 shrink-0"></i>
+                        <div><p class="text-xs font-black">Top Up Pools</p><p class="text-[9px] opacity-70">Inject token liquidity</p></div>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section id="usersView" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-black tracking-tight">Ecosystem Ledger Accounts</h2>
+                    <p class="text-xs text-slate-400" style="color: var(--text-muted)">Toggle permissions and manage security properties.</p>
+                </div>
+            </div>
+            
+            <div id="usersListContainer" class="space-y-3">
+                </div>
+        </section>
+
+        <section id="storeView" class="space-y-4 hidden">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-black tracking-tight">Curated Tokens Registry</h2>
+                    <p class="text-xs text-slate-400" style="color: var(--text-muted)">Configure values, adjustments, and inventory balances.</p>
+                </div>
+                <button onclick="openModal('addTokenModal')" class="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-sky-500 text-white font-bold text-xs shadow-md hover:bg-sky-400 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i> <span class="hidden sm:inline">List Token</span>
+                </button>
+            </div>
+
+            <div id="adminStoreGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+        </section>
+
+        <section id="settingsView" class="space-y-6 hidden">
+            <div class="space-y-1">
+                <h2 class="text-xl font-black tracking-tight">System Settings & Controls</h2>
+                <p class="text-xs text-slate-400" style="color: var(--text-muted)">Configure automation parameters and security engines.</p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- LIVE BNB PRICE (CoinGecko) -->
+                <div class="glass-panel rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="space-y-1">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Price Source</h4>
+                        <p class="text-sm font-semibold flex items-center gap-1.5 text-emerald-400">
+                            <span class="w-2 h-2 bg-emerald-400 rounded-full animate-ping"></span> CoinGecko Live (read-only)
+                        </p>
+                    </div>
+                    <div class="space-y-1">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider" style="color: var(--text-muted)">Live BNB Price</h4>
+                        <p id="oracleBnbPrice" class="text-sm font-mono font-bold text-sky-400">Fetching...</p>
+                    </div>
+                </div>
+
+                <!-- FEE STRUCTURE -->
+                <div class="glass-panel rounded-2xl p-5 space-y-4">
+                    <h4 class="text-sm font-black flex items-center gap-2"><i data-lucide="percent" class="w-4 h-4 text-amber-400"></i> Fee Structure</h4>
+                    <p class="text-[11px] text-slate-400" style="color: var(--text-muted)">Set platform fees for swaps, transfers, and deposits.</p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1" style="color: var(--text-muted)">Swap Fee %</span>
+                            <input id="feeSwap" type="number" min="0" max="100" step="0.01" value="0" class="w-full bg-slate-950/40 text-white rounded-lg px-2 py-1.5 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                        </div>
+                        <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1" style="color: var(--text-muted)">Transfer Fee %</span>
+                            <input id="feeTransfer" type="number" min="0" max="100" step="0.01" value="0" class="w-full bg-slate-950/40 text-white rounded-lg px-2 py-1.5 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                        </div>
+                        <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1" style="color: var(--text-muted)">Deposit Fee %</span>
+                            <input id="feeDeposit" type="number" min="0" max="100" step="0.01" value="0" class="w-full bg-slate-950/40 text-white rounded-lg px-2 py-1.5 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                        </div>
+                    </div>
+                    <button onclick="saveFees()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all">Save Fee Structure</button>
+                </div>
+
+                <!-- TREASURY POOL CONFIG -->
+                <div class="glass-panel rounded-2xl p-5 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-sm font-black flex items-center gap-2"><i data-lucide="landmark" class="w-4 h-4 text-emerald-400"></i> Treasury Swap Pool</h4>
+                            <p class="text-[11px] text-slate-400" style="color: var(--text-muted)">The funded wallet that backs and settles every user swap.</p>
+                        </div>
+                        <span id="treasuryStatusBadge" class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-500/20 text-slate-400">Not Set</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5 sm:col-span-2">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block" style="color: var(--text-muted)">Pool Address</span>
+                            <p id="treasuryAddressDisplay" class="text-xs font-mono break-all mt-1">—</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                            <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block" style="color: var(--text-muted)">BNB Balance</span>
+                            <p id="treasuryBnbBalance" class="text-sm font-mono font-bold text-amber-400 mt-1">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Treasury QR Code -->
+                    <div id="treasuryQRContainer" class="hidden p-3 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                        <p class="text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-2" style="color: var(--text-muted)">Deposit QR Code</p>
+                        <div id="treasuryQRCode" class="w-44 h-44 mx-auto bg-white rounded-xl overflow-hidden"></div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs font-bold text-slate-400 block" style="color: var(--text-muted)">Treasury Private Key</label>
+                        <input id="inputTreasuryPrivateKey" type="password" placeholder="0x... (used to derive the pool address)" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-emerald-500">
+                        <input id="inputTreasuryLabel" type="text" placeholder="Pool label (optional)" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs focus:outline-none focus:border-emerald-500">
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="saveTreasuryPoolHandler()" class="py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all">Save Pool</button>
+                            <button onclick="refreshTreasuryBalance()" class="py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold transition-all flex items-center justify-center gap-1"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Balance</button>
+                            <button onclick="generateTreasuryQR()" class="py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 text-xs font-bold transition-all flex items-center justify-center gap-1"><i data-lucide="qr-code" class="w-3.5 h-3.5"></i> QR Code</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LOGOUT -->
+                <div class="glass-panel rounded-2xl p-5 space-y-4">
+                    <h4 class="text-sm font-black flex items-center gap-2"><i data-lucide="log-out" class="w-4 h-4 text-rose-400"></i> Admin Session</h4>
+                    <p class="text-[11px] text-slate-400" style="color: var(--text-muted)">End your current admin session and return to the login page.</p>
+                    <button onclick="handleAdminLogout()" class="w-full px-5 py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition-all shadow-md">
+                        <i data-lucide="log-out" class="w-4 h-4 inline-block mr-2"></i> Sign Out
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="addTokenModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-lg rounded-t-3xl p-6 space-y-4 transform translate-y-full transition-transform duration-300 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-black">List New Scrap Token Asset</h3>
+                <button onclick="closeModal('addTokenModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">BSC Contract Address</label>
+                    <div class="flex gap-2">
+                        <input id="inputContractAddress" type="text" placeholder="0x..." class="flex-1 bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                        <button onclick="autoFetchContractInfo()" class="px-3 py-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 text-xs font-bold transition-all" title="Auto-fetch decimals and logo">
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <p class="text-[9px] text-slate-500" style="color: var(--text-muted)">Click ⚡ to auto-fetch decimals & logo, or enter manually below</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Token Name</label>
+                        <input id="inputTokenName" type="text" placeholder="e.g. GarbageCoin" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Token Symbol</label>
+                        <input id="inputTokenSymbol" type="text" placeholder="e.g. TRSH" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Decimals (0-18)</label>
+                        <input id="inputTokenDecimals" type="number" min="0" max="18" value="18" placeholder="18" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Tokens per 1 USD</label>
+                        <input id="inputTokenPrice" type="number" step="0.000001" placeholder="0.001" oninput="updateMinimumDisplay()" class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Minimum Purchase (USD)</label>
+                        <div class="flex gap-1.5">
+                            <input id="inputTokenMinSwap" type="number" step="0.01" value="1" placeholder="1.00" oninput="updateMinimumDisplay()" class="flex-1 bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                            <div class="bg-slate-950/40 border border-white/10 rounded-xl px-3 py-3 text-xs font-mono text-slate-400 flex items-center" style="color: var(--text-muted)" id="minCalcDisplay">---</div>
+                        </div>
+                        <p class="text-[9px] text-slate-500 mt-1" style="color: var(--text-muted)">Minimum USD worth users can buy</p>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Logo URL (Optional)</label>
+                        <input id="inputTokenLogoUrl" type="text" placeholder="https://..." class="w-full bg-slate-950/40 text-white rounded-xl p-3 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
+                    <p class="text-xs text-amber-400 font-mono">💡 Liquidity will auto-check after adding token. Top up in treasury if needed.</p>
+                </div>
+            </div>
+
+            <button onclick="commitTokenToRegistry()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold text-sm tracking-wide transition-all shadow-lg glow-effect">
+                Inject & Publish to Marketplace
+            </button>
+        </div>
+    </div>
+
+    <div id="broadcastModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-md rounded-t-3xl p-6 space-y-4 transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-black">Broadcast System Alerts</h3>
+                <button onclick="closeModal('broadcastModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Recipient Target Scope</label>
+                    <select id="msgTargetScope" class="w-full bg-slate-950/60 text-white rounded-xl p-3 border border-white/10 text-xs focus:outline-none focus:border-sky-500">
+                        <option value="all">Broadcast to All Connected Accounts</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Alert Message Text String</label>
+                    <textarea id="msgAlertText" rows="3" placeholder="Ecology system upgrades scheduled for midnight..." class="w-full bg-slate-950/60 text-white rounded-xl p-3 border border-white/10 text-xs focus:outline-none focus:border-sky-500"></textarea>
+                </div>
+            </div>
+            <button onclick="dispatchNotificationMessage()" class="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs tracking-wider transition-all shadow-md">
+                Transmit Push Event
+            </button>
+        </div>
+    </div>
+
+    <div id="topupModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 space-y-4 transform scale-95 transition-transform duration-300">
+            <h3 class="text-lg font-black">Inject Treasury Supply</h3>
+            <p id="topupModalSubtitle" class="text-xs text-slate-400" style="color: var(--text-muted)">Top up available scrap coin reserves.</p>
+            <div>
+                <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Additional Supply Amount</label>
+                <input id="inputTopupAmount" type="number" placeholder="10000" class="w-full bg-slate-950/60 text-white rounded-xl p-3 border border-white/10 text-sm font-mono focus:outline-none focus:border-emerald-500">
+            </div>
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="closeModal('topupModal')" class="py-3 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold transition-all">Cancel</button>
+                <button onclick="commitTopupReserves()" class="py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md">Inject Funds</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md md:max-w-2xl glass-panel rounded-t-3xl md:rounded-2xl px-6 py-3 flex justify-around items-center z-40 border-t border-white/10 md:mb-4 shadow-2xl transition-all">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-sky-400 transition-all active:scale-95 px-3 py-1 rounded-xl">
+            <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+            <span class="text-[9px] md:text-xs font-bold tracking-wider uppercase md:normal-case">Dashboard</span>
+        </button>
+        <button onclick="switchTab('users')" id="tab-users" class="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-slate-400 hover:text-sky-400 transition-all active:scale-95 px-3 py-1 rounded-xl">
+            <i data-lucide="users" class="w-5 h-5"></i>
+            <span class="text-[9px] md:text-xs font-bold tracking-wider uppercase md:normal-case">Users</span>
+        </button>
+        <button onclick="switchTab('store')" id="tab-store" class="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-slate-400 hover:text-sky-400 transition-all active:scale-95 px-3 py-1 rounded-xl">
+            <i data-lucide="store" class="w-5 h-5"></i>
+            <span class="text-[9px] md:text-xs font-bold tracking-wider uppercase md:normal-case">Store</span>
+        </button>
+        <button onclick="switchTab('settings')" id="tab-settings" class="flex flex-col md:flex-row items-center gap-1 md:gap-2 text-slate-400 hover:text-sky-400 transition-all active:scale-95 px-3 py-1 rounded-xl">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+            <span class="text-[9px] md:text-xs font-bold tracking-wider uppercase md:normal-case">Settings</span>
+        </button>
+    </nav>
+
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 glass-panel border-sky-500/30 px-5 py-3 rounded-xl text-xs font-bold tracking-wide shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50 text-center text-sky-400">
+        System Action Notification Output
+    </div>
+
+    <script type="module">
+        import { 
+            subscribeToAuthState, 
+            getUsers, 
+            subscribeToUsers,
+            getTokens, 
+            subscribeToTokens, 
+            addToken, 
+            updateToken, 
+            deleteToken,
+            setTokenVisibility,
+            fetchTokenLogo,
+            fetchTokenNameSymbolDecimals,
+            getTokenLiquidityOnChain,
+            updateUserStatus,
+            createBroadcastMessage,
+            subscribeToMessages,
+            subscribeToDashboardStats,
+            logoutUser,
+            updateBnbPrice,
+            initializeSystemSettings,
+            updateFees,
+            subscribeToFees,
+            getPrivateKey,
+            getUserProfile,
+            saveTreasuryPool,
+            subscribeToTreasuryPool,
+            getTreasuryBnbBalance,
+            getTreasuryPool
+        } from './firestore-service.js';
+        import { getBnbPrice, subscribeToBnbPrice } from './coingecko-service.js';
+        import { auth } from './firebase-config.js';
+
+        let ADMIN_MANAGED_TOKENS = [];
+        let USER_ACCOUNTS = [];
+        let BNB_PRICE_USD = 400;
+        let activeSelectedTopupTokenId = null;
+        let currentUser = null;
+        let unsubscribeBnbPrice = null;
+        let unsubscribeMessages = null;
+        let unsubscribeTreasury = null;
+        let unsubscribeFees = null;
+        let unsubscribeCoinGecko = null;
+        let currentTreasury = null;
+        let currentFees = { swapFeePercent: 0, transferFeePercent: 0, depositFeePercent: 0 };
+
+        // --- LIFECYCLE MANAGEMENT INIT PIPELINES ---
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            initThemeFramework();
+            initializeSystemSettings();
+            initBnbPriceSubscription();
+            initAuthCheck();
+        });
+
+        function initBnbPriceSubscription() {
+            // Fetch live BNB price from CoinGecko (read-only, no admin-set price)
+            unsubscribeCoinGecko = subscribeToBnbPrice((newPrice) => {
+                if (newPrice > 0) {
+                    BNB_PRICE_USD = newPrice;
+                    console.log(`✅ Live BNB Price from CoinGecko: $${newPrice.toFixed(2)}`);
+                    document.getElementById("oracleBnbPrice").innerText = `$${newPrice.toFixed(2)} USD`;
+                    renderStoreInventoryManagement();
+                }
+            });
+        }
+
+        function initAuthCheck() {
+            subscribeToAuthState(async (user) => {
+                if (!user) {
+                    window.location.href = "index.html";
+                    return;
+                }
+                
+                currentUser = user;
+                
+                // Check if user is admin by reading Firestore profile
+                const profileResult = await getUserProfile(user.uid);
+                if (!profileResult.success || profileResult.profile.role !== 'admin') {
+                    window.location.href = "store.html";
+                    return;
+                }
+
+                initializeRealtimeListeners();
+            });
+        }
+
+        function initializeRealtimeListeners() {
+            // Real-time subscription to users
+            subscribeToUsers((users) => {
+                USER_ACCOUNTS = users;
+                renderUsersManagementLedger();
+                renderBroadcastRecipientOptions();
+                document.getElementById("dashTotalUsers").innerText = USER_ACCOUNTS.length;
+            });
+
+            // Real-time subscription to tokens
+            subscribeToTokens((tokens) => {
+                ADMIN_MANAGED_TOKENS = tokens;
+                renderStoreInventoryManagement();
+                document.getElementById("dashTotalPairs").innerText = ADMIN_MANAGED_TOKENS.length;
+            });
+
+            // Real-time subscription to dashboard stats
+            subscribeToDashboardStats((stats) => {
+                if (stats) {
+                    // Update total volume in USD
+                    document.getElementById("dashTotalVolume").innerText = `$${stats.totalVolume.toFixed(2)}`;
+                    // Update BNB pool (total volume converted to BNB)
+                    document.getElementById("dashBnbPool").innerText = (stats.totalVolume / BNB_PRICE_USD).toFixed(3) + " BNB";
+                    document.getElementById("dashTotalUsers").innerText = stats.totalUsers;
+                    document.getElementById("dashFlaggedUsers").innerText = stats.flaggedUsers;
+                    document.getElementById("dashTotalPairs").innerText = stats.totalTokens;
+                }
+            });
+
+            // Real-time subscription to broadcast messages
+            unsubscribeMessages = subscribeToMessages('all', (messages) => {
+                renderDashboardAlerts(messages);
+            });
+
+            // Real-time subscription to treasury pool
+            unsubscribeTreasury = subscribeToTreasuryPool((treasury) => {
+                currentTreasury = treasury;
+                renderTreasuryPool(treasury);
+            });
+
+            // Real-time subscription to fee settings
+            unsubscribeFees = subscribeToFees((fees) => {
+                currentFees = fees;
+                renderFeeInputs(fees);
+            });
+        }
+
+        // --- TREASURY POOL MANAGEMENT ---
+        function renderTreasuryPool(treasury) {
+            const badge = document.getElementById("treasuryStatusBadge");
+            const addrEl = document.getElementById("treasuryAddressDisplay");
+            const labelInput = document.getElementById("inputTreasuryLabel");
+            const qrContainer = document.getElementById("treasuryQRContainer");
+
+            if (treasury && treasury.address) {
+                badge.className = "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400";
+                badge.innerText = "Active";
+                addrEl.innerText = treasury.address;
+                if (labelInput && !labelInput.value) labelInput.value = treasury.label || "";
+                // Auto-generate QR code
+                generateQRCode(treasury.address, "treasuryQRCode");
+                qrContainer.classList.remove("hidden");
+            } else {
+                badge.className = "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-500/20 text-slate-400";
+                badge.innerText = "Not Set";
+                addrEl.innerText = "—";
+                qrContainer.classList.add("hidden");
+            }
+        }
+
+        async function saveTreasuryPoolHandler() {
+            const pk = document.getElementById("inputTreasuryPrivateKey").value.trim();
+            const label = document.getElementById("inputTreasuryLabel").value.trim();
+
+            if (!pk) {
+                showToast("Enter the treasury private key", "error");
+                return;
+            }
+
+            // Derive the pool address from the private key.
+            let address = "";
+            try {
+                const wallet = new ethers.Wallet(pk);
+                address = wallet.address;
+            } catch (e) {
+                showToast("Invalid private key format", "error");
+                return;
+            }
+
+            showToast("Saving treasury pool...");
+            const result = await saveTreasuryPool({ privateKey: pk, address, label });
+            if (result.success) {
+                document.getElementById("inputTreasuryPrivateKey").value = "";
+                showToast(`✅ Treasury pool set: ${address.substring(0,6)}...${address.substring(address.length-4)}`);
+                refreshTreasuryBalance();
+            } else {
+                showToast(result.error, "error");
+            }
+        }
+
+        async function refreshTreasuryBalance() {
+            const el = document.getElementById("treasuryBnbBalance");
+            el.innerText = "Loading...";
+            const bal = await getTreasuryBnbBalance();
+            el.innerText = `${bal} BNB`;
+        }
+
+        // --- QR CODE GENERATION ---
+        function generateQRCode(address, elementId) {
+            const el = document.getElementById(elementId);
+            if (!el || !address) return;
+            // Use a free QR code API (no key required)
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(address)}&bgcolor=ffffff&color=0f172a`;
+            el.innerHTML = `<img src="${qrUrl}" alt="QR Code" class="w-full h-full rounded-lg">`;
+        }
+
+        function generateTreasuryQR() {
+            const addr = currentTreasury && currentTreasury.address;
+            if (!addr) {
+                showToast("Save the treasury pool first", "error");
+                return;
+            }
+            generateQRCode(addr, "treasuryQRCode");
+            document.getElementById("treasuryQRContainer").classList.remove("hidden");
+            showToast("✅ Treasury QR code generated");
+        }
+
+        // --- FEE MANAGEMENT ---
+        function renderFeeInputs(fees) {
+            const s = document.getElementById("feeSwap");
+            const t = document.getElementById("feeTransfer");
+            const d = document.getElementById("feeDeposit");
+            if (s) s.value = fees.swapFeePercent ?? 0;
+            if (t) t.value = fees.transferFeePercent ?? 0;
+            if (d) d.value = fees.depositFeePercent ?? 0;
+        }
+
+        async function saveFees() {
+            const swapFee = parseFloat(document.getElementById("feeSwap").value) || 0;
+            const transferFee = parseFloat(document.getElementById("feeTransfer").value) || 0;
+            const depositFee = parseFloat(document.getElementById("feeDeposit").value) || 0;
+            const result = await updateFees({ swapFeePercent: swapFee, transferFeePercent: transferFee, depositFeePercent: depositFee });
+            showToast(result.success ? "✅ Fee structure saved" : result.error, result.success ? "success" : "error");
+        }
+
+        // Vault state is managed through Firestore settings collection
+
+        // --- TOKEN MANAGEMENT UTILITIES ---
+        async function fetchTokenDecimals(contractAddress) {
+            try {
+                const provider = new ethers.JsonRpcProvider('https://bsc-dataseed1.binance.org:443');
+                const erc20ABI = [
+                    {
+                        constant: true,
+                        inputs: [],
+                        name: 'decimals',
+                        outputs: [{ type: 'uint8' }],
+                        type: 'function'
+                    }
+                ];
+                const contract = new ethers.Contract(contractAddress, erc20ABI, provider);
+                const decimals = await contract.decimals();
+                return parseInt(decimals);
+            } catch (error) {
+                console.warn('Failed to fetch decimals from contract:', error);
+                return 18; // Default fallback
+            }
+        }
+
+        async function autoFetchContractInfo() {
+            const address = document.getElementById("inputContractAddress").value.trim();
+            if (!address || !/^0x[a-fA-F0-9]{40}$/.test(address)) {
+                showToast("Enter a valid BSC contract address (0x...)", "error");
+                return;
+            }
+
+            showToast("Fetching contract info...");
+
+            // Fetch name, symbol, and decimals
+            const tokenInfo = await fetchTokenNameSymbolDecimals(address);
+            if (tokenInfo.success) {
+                document.getElementById("inputTokenName").value = tokenInfo.name;
+                document.getElementById("inputTokenSymbol").value = tokenInfo.symbol;
+                document.getElementById("inputTokenDecimals").value = tokenInfo.decimals;
+            } else {
+                showToast(`Failed to fetch: ${tokenInfo.error}`, "error");
+                return;
+            }
+
+            // Fetch logo
+            const logoUrl = await fetchTokenLogo(address, tokenInfo.symbol);
+            document.getElementById("inputTokenLogoUrl").value = logoUrl;
+
+            showToast(`✅ Name: ${tokenInfo.name}, Symbol: ${tokenInfo.symbol}, Decimals: ${tokenInfo.decimals}`);
+        }
+
+        function updateMinimumDisplay() {
+            // Real-time display of what minimum purchase costs
+            const minUsd = parseFloat(document.getElementById("inputTokenMinSwap").value) || 1;
+            const tokensPer1Usd = parseFloat(document.getElementById("inputTokenPrice").value) || 0;
+            
+            if (tokensPer1Usd > 0) {
+                // Cost = minUsd × discount rate
+                const cost = minUsd * tokensPer1Usd;
+                document.getElementById("minCalcDisplay").innerText = `$${cost.toFixed(4)}`;
+            } else {
+                document.getElementById("minCalcDisplay").innerText = "---";
+            }
+        }
+
+        async function commitTokenToRegistry() {
+            const name = document.getElementById("inputTokenName").value.trim();
+            const symbol = document.getElementById("inputTokenSymbol").value.trim().toUpperCase();
+            const contract = document.getElementById("inputContractAddress").value.trim();
+            const tokensPer1Usd = parseFloat(document.getElementById("inputTokenPrice").value);
+            const minSwap = parseFloat(document.getElementById("inputTokenMinSwap").value) || 1;
+            const decimals = parseInt(document.getElementById("inputTokenDecimals").value) || 18;
+            let logoUrl = document.getElementById("inputTokenLogoUrl").value.trim();
+
+            if (!name || !symbol || isNaN(tokensPer1Usd) || isNaN(minSwap)) {
+                showToast("Verify all required fields are configured.", "error");
+                return;
+            }
+            
+            if (minSwap < 0.01) {
+                showToast("Minimum swap must be at least $0.01", "error");
+                return;
+            }
+
+            if (tokensPer1Usd <= 0) {
+                showToast("Tokens per 1 USD must be greater than 0", "error");
+                return;
+            }
+
+            showToast("Publishing token and checking on-chain liquidity...");
+
+            // Use manual logo if provided, otherwise auto-fetch
+            if (!logoUrl) {
+                logoUrl = await fetchTokenLogo(contract, symbol);
+            }
+
+            // Check on-chain liquidity in treasury
+            const treasury = await getTreasuryPool();
+            const treasuryAddr = treasury?.address || '';
+            let onChainLiquidity = 0;
+            let hasLiquidity = false;
+
+            if (treasuryAddr) {
+                const liquidityCheck = await getTokenLiquidityOnChain(contract, treasuryAddr, decimals);
+                if (liquidityCheck.success) {
+                    onChainLiquidity = liquidityCheck.liquidity;
+                    hasLiquidity = onChainLiquidity > 0;
+                    console.log(`✅ On-chain liquidity for ${symbol}: ${onChainLiquidity.toFixed(4)}`);
+                }
+            }
+
+            if (!hasLiquidity) {
+                showToast(`⚠️ No liquidity found for ${symbol} in treasury! Please top up before enabling in store.`, "warning");
+            }
+
+            const result = await addToken({
+                name: name,
+                symbol: symbol,
+                contract: contract,
+                decimals: decimals,
+                tokensPer1Usd: tokensPer1Usd,  // NEW: tokens per 1 USD rate
+                minSwapUsd: minSwap,
+                onChainLiquidity: onChainLiquidity,  // Store current liquidity
+                logoUrl: logoUrl,
+                icon: "💎",
+                color: "from-blue-500 to-indigo-600",
+                visibleInStore: hasLiquidity  // Only show if has liquidity
+            });
+
+            if (result.success) {
+                showToast(`✅ ${symbol} added! Liquidity: ${onChainLiquidity.toFixed(4)} | Status: ${hasLiquidity ? '✅ Live' : '❌ Need Liquidity'}`);
+                closeModal("addTokenModal");
+                // Clear form
+                document.getElementById("inputContractAddress").value = "";
+                document.getElementById("inputTokenName").value = "";
+                document.getElementById("inputTokenSymbol").value = "";
+                document.getElementById("inputTokenPrice").value = "";
+                document.getElementById("inputTokenMinSwap").value = "1";
+                document.getElementById("inputTokenDecimals").value = "18";
+                document.getElementById("inputTokenLogoUrl").value = "";
+                // Reload tokens to show new token
+                loadAdminTokenRegistry();
+            } else {
+                showToast(result.error, "error");
+            }
+        }
+
+        // --- ACCOUNT SECURITY & INTERACTION LEDGERS ---
+        function renderUsersManagementLedger() {
+            const container = document.getElementById("usersListContainer");
+            container.innerHTML = "";
+
+            USER_ACCOUNTS.forEach((user) => {
+                const isFrozen = user.status === "Frozen";
+                const rowHtml = `
+                    <div class="glass-panel p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.01]">
+                        <div class="flex items-start gap-3">
+                            <div class="p-2.5 rounded-xl ${isFrozen ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}">
+                                <i data-lucide="${isFrozen ? 'shield-alert' : 'user'}" class="w-5 h-5"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-sm">${user.userName || 'Unknown'}</h4>
+                                    <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${isFrozen ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'}">${user.status}</span>
+                                </div>
+                                <p class="text-xs font-mono text-slate-400 mt-0.5" style="color: var(--text-muted)">${user.email}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 justify-end pt-2 sm:pt-0 border-t border-white/5 sm:border-none">
+                            <div class="text-right pr-2 hidden sm:block">
+                                <p class="text-[10px] text-slate-400 uppercase font-bold" style="color: var(--text-muted)">User Balance</p>
+                                <p class="text-xs font-mono font-bold text-amber-400">${(user.bnbBalance || 0).toFixed(4)} BNB</p>
+                            </div>
+                            <button onclick="viewUserPrivateKey('${user.id}')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition-all bg-amber-500/20 text-amber-400 hover:bg-amber-500/30" title="Admin: View wallet private key">
+                                🔐 Key
+                            </button>
+                            <button onclick="toggleUserStatusHandler('${user.id}')" class="px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${isFrozen ? 'bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30' : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20'}">
+                                ${isFrozen ? 'Unfreeze' : 'Freeze Vault'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML("beforeend", rowHtml);
+            });
+            lucide.createIcons();
+        }
+
+        async function viewUserPrivateKey(userId) {
+            try {
+                const privateKey = await getPrivateKey(userId);
+                if (!privateKey) {
+                    showToast("⚠️ No private key found for this user", "error");
+                    return;
+                }
+                
+                // Copy to clipboard
+                await navigator.clipboard.writeText(privateKey);
+                showToast("✅ Private key copied to clipboard (admin view)");
+                console.log('🔐 Private key retrieved for admin:', userId);
+            } catch (err) {
+                console.error('Error retrieving private key:', err);
+                showToast("Failed to retrieve private key", "error");
+            }
+        }
+
+        async function toggleUserStatusHandler(userId) {
+            const user = USER_ACCOUNTS.find(u => u.id === userId);
+            if (!user) return;
+            
+            const newStatus = user.status === "Active" ? "Frozen" : "Active";
+            const result = await updateUserStatus(userId, newStatus);
+            
+            if (result.success) {
+                showToast(`User status updated to: ${newStatus}`);
+            } else {
+                showToast(result.error, "error");
+            }
+        }
+
+        // Lightweight handler for incoming broadcast messages (avoids ReferenceError
+        // in the real-time subscription). Logs latest broadcasts for the admin.
+        function renderDashboardAlerts(messages) {
+            if (!Array.isArray(messages)) return;
+            const sorted = [...messages].sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            console.log(`📢 ${sorted.length} broadcast message(s) in real-time registry`);
+        }
+
+        // Populate the broadcast recipient dropdown from live Firestore users.
+        function renderBroadcastRecipientOptions() {
+            const select = document.getElementById("msgTargetScope");
+            if (!select) return;
+            const current = select.value;
+            select.innerHTML = '<option value="all">Broadcast to All Connected Accounts</option>';
+            USER_ACCOUNTS.filter(u => u.role !== 'admin').forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u.id;
+                opt.textContent = `Specific User: ${u.userName || 'Unknown'} (${u.email || u.id})`;
+                select.appendChild(opt);
+            });
+            if (current) select.value = current;
+        }
+
+        async function dispatchNotificationMessage() {
+            const msg = document.getElementById("msgAlertText").value.trim();
+            const scope = document.getElementById("msgTargetScope").value;
+            
+            if (!msg) {
+                showToast("Notification message body string payload empty.", "error");
+                return;
+            }
+
+            const result = await createBroadcastMessage({
+                message: msg,
+                targetScope: scope
+            });
+
+            if (result.success) {
+                showToast("System broadcast frame published through real-time push gateway.");
+                document.getElementById("msgAlertText").value = "";
+                closeModal("broadcastModal");
+            } else {
+                showToast(result.error, "error");
+            }
+        }
+
+        // --- INVENTORY MANAGEMENT ENGINE ROUTERS ---
+        async function loadRealLiquidity(tokenId, contractAddress, treasuryAddress, decimals) {
+            try {
+                if (!contractAddress || !treasuryAddress) return;
+                const result = await getTokenLiquidityOnChain(contractAddress, treasuryAddress, decimals);
+                if (result.success) {
+                    const el = document.getElementById(`liquidity-${tokenId}`);
+                    if (el) el.innerText = result.liquidity.toLocaleString();
+                }
+            } catch (err) {
+                console.error('Failed to load liquidity:', err);
+            }
+        }
+
+        function renderStoreInventoryManagement() {
+            const grid = document.getElementById("adminStoreGrid");
+            grid.innerHTML = "";
+
+            if (ADMIN_MANAGED_TOKENS.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-10 glass-panel rounded-2xl border-dashed border-white/10"><p class="text-xs text-slate-400" style="color: var(--text-muted)">No tokens listed yet. Use "List Token" to add one.</p></div>`;
+                return;
+            }
+
+            ADMIN_MANAGED_TOKENS.forEach(token => {
+                const bnbRate = ((token.presetUsdPrice || 0) / BNB_PRICE_USD).toFixed(6);
+                const isVisible = token.visibleInStore === true;
+                const logo = token.logoUrl
+                    ? `<img src="${token.logoUrl}" alt="${token.symbol}" class="w-10 h-10 rounded-xl object-cover shadow-md bg-slate-800" onerror="this.style.display='none'">`
+                    : `<div class="w-10 h-10 rounded-xl bg-gradient-to-tr ${token.color || 'from-blue-500 to-indigo-600'} flex items-center justify-center text-lg shadow-md">${token.icon || '💎'}</div>`;
+
+                const cardHtml = `
+                    <div class="glass-panel p-5 rounded-2xl space-y-4 relative overflow-hidden">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-center gap-3">
+                                ${logo}
+                                <div>
+                                    <h4 class="font-bold text-base">${token.name}</h4>
+                                    <p class="text-[10px] font-mono text-slate-400 truncate w-36" style="color: var(--text-muted)">${token.contract || ''}</p>
+                                    <p class="text-[8px] font-mono text-slate-500 mt-0.5" style="color: var(--text-muted)">Decimals: ${token.decimals !== undefined ? token.decimals : '18'}</p>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${isVisible ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-500/20 text-slate-400'}">${isVisible ? 'Live' : 'Hidden'}</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                                <label class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1" style="color: var(--text-muted)">Price (USD)</label>
+                                <div class="flex items-center gap-1.5">
+                                    <input id="price-${token.id}" type="number" step="0.000001" value="${token.presetUsdPrice || 0}" class="w-full bg-slate-950/40 text-white rounded-lg px-2 py-1.5 border border-white/10 text-xs font-mono focus:outline-none focus:border-sky-500">
+                                    <button onclick="saveTokenPrice('${token.id}')" class="px-2 py-1.5 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 text-xs font-bold">Set</button>
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5">
+                                <span class="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1" style="color: var(--text-muted)">Real Treasury Liquidity</span>
+                                <span id="liquidity-${token.id}" class="text-sm font-mono font-black text-white">--loading--</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2">
+                            <button onclick="toggleTokenVisibility('${token.id}')" class="flex-1 px-3 py-2 rounded-lg ${isVisible ? 'bg-amber-500/10 text-amber-400 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'} text-xs font-bold transition-all flex items-center justify-center gap-1">
+                                <i data-lucide="${isVisible ? 'eye-off' : 'eye'}" class="w-3.5 h-3.5"></i> ${isVisible ? 'Hide from Store' : 'Show in Store'}
+                            </button>
+                            <button onclick="initiateTopupFlow('${token.id}')" class="px-3 py-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold transition-all flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Fund
+                            </button>
+                            <button onclick="removeTokenHandler('${token.id}')" class="px-3 py-2 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-bold transition-all">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex justify-between items-center text-[10px] font-mono opacity-60">
+                            <span>Oracle Rate Sync</span>
+                            <span>${bnbRate} BNB</span>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML("beforeend", cardHtml);
+                
+                // Load real liquidity for this token
+                if (token.contract && currentTreasury?.address) {
+                    loadRealLiquidity(token.id, token.contract, currentTreasury.address, token.decimals || 18);
+                }
+            });
+            lucide.createIcons();
+        }
+
+        async function saveTokenPrice(tokenId) {
+            const input = document.getElementById(`price-${tokenId}`);
+            const price = parseFloat(input.value);
+            if (isNaN(price) || price < 0) {
+                showToast("Enter a valid price", "error");
+                return;
+            }
+            const result = await updateToken(tokenId, { presetUsdPrice: price });
+            showToast(result.success ? `✅ Price updated to $${price}` : result.error, result.success ? "success" : "error");
+        }
+
+        async function toggleTokenVisibility(tokenId) {
+            const token = ADMIN_MANAGED_TOKENS.find(t => t.id === tokenId);
+            if (!token) return;
+            const next = !(token.visibleInStore === true);
+            const result = await setTokenVisibility(tokenId, next);
+            showToast(result.success ? (next ? "✅ Token now live in store" : "Token hidden from store") : result.error, result.success ? "success" : "error");
+        }
+
+        async function removeTokenHandler(tokenId) {
+            const token = ADMIN_MANAGED_TOKENS.find(t => t.id === tokenId);
+            if (!token) return;
+            if (!confirm(`Delete ${token.name} (${token.symbol}) from the registry? This cannot be undone.`)) return;
+            const result = await deleteToken(tokenId);
+            showToast(result.success ? `${token.symbol} removed` : result.error, result.success ? "success" : "error");
+        }
+
+        function initiateTopupFlow(tokenId) {
+            const token = ADMIN_MANAGED_TOKENS.find(t => t.id === tokenId);
+            if(!token) return;
+            activeSelectedTopupTokenId = tokenId;
+            document.getElementById("topupModalSubtitle").innerText = `Inject additional storage volume into ${token.name} (${token.symbol}) standard pool.`;
+            openModal("topupModal");
+        }
+
+        async function commitTopupReserves() {
+            const amountStr = document.getElementById("inputTopupAmount").value;
+            const amount = parseFloat(amountStr);
+            if (isNaN(amount) || amount <= 0) {
+                showToast("Specify a correct inventory deposit unit boundary.", "error");
+                return;
+            }
+
+            const token = ADMIN_MANAGED_TOKENS.find(t => t.id === activeSelectedTopupTokenId);
+            const newSupply = token.treasurySupply + amount;
+            
+            const result = await updateToken(activeSelectedTopupTokenId, {
+                treasurySupply: newSupply
+            });
+
+            if (result.success) {
+                showToast(`Treasury reserve pools successfully populated for asset target.`);
+                closeModal("topupModal");
+                document.getElementById("inputTopupAmount").value = "";
+            } else {
+                showToast(result.error, "error");
+            }
+        }
+
+        // --- UTILITY FRAMEWORKS TAB INTERFACE SWITCH ROUTERS ---
+        function switchTab(target) {
+            const viewIds = ["dashboard", "users", "store", "settings"];
+            viewIds.forEach(id => {
+                const viewEl = document.getElementById(`${id}View`);
+                const tabEl = document.getElementById(`tab-${id}`);
+                
+                if (id === target) {
+                    viewEl.classList.remove("hidden");
+                    tabEl.className = "flex flex-col md:flex-row items-center gap-1 md:gap-2 text-sky-400 transition-all active:scale-95 bg-sky-500/5 px-3 py-1 rounded-xl border border-sky-500/10";
+                } else {
+                    viewEl.classList.add("hidden");
+                    tabEl.className = "flex flex-col md:flex-row items-center gap-1 md:gap-2 text-slate-400 hover:text-sky-400 transition-all active:scale-95 px-3 py-1 rounded-xl";
+                }
+            });
+        }
+
+        function initThemeFramework() {
+            const curTheme = localStorage.getItem("admin_theme") || "dark";
+            document.documentElement.setAttribute("data-theme", curTheme);
+            adjustThemeUiVisualStates(curTheme);
+
+            document.getElementById("themeToggle").addEventListener("click", () => {
+                const target = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", target);
+                localStorage.setItem("admin_theme", target);
+                adjustThemeUiVisualStates(target);
+            });
+        }
+
+        function adjustThemeUiVisualStates(theme) {
+            const icon = document.getElementById("themeIcon");
+            if (theme === "dark") {
+                icon.setAttribute("data-lucide", "sun");
+                icon.classList.remove("text-slate-400");
+                icon.classList.add("text-amber-400");
+            } else {
+                icon.setAttribute("data-lucide", "moon");
+                icon.classList.remove("text-amber-400");
+                icon.classList.add("text-slate-600");
+            }
+            lucide.createIcons();
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                modal.classList.remove("opacity-0");
+                const body = modal.querySelector('.transform');
+                body.classList.remove("translate-y-full", "scale-95");
+            }, 10);
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const body = modal.querySelector('.transform');
+            body.classList.add(modal.id.includes('Modal') && !modal.id.includes('vault') && !modal.id.includes('topup') ? "translate-y-full" : "scale-95");
+            modal.classList.add("opacity-0");
+            setTimeout(() => { modal.classList.add("hidden"); }, 300);
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.style.borderColor = type === "error" ? "rgba(239, 68, 68, 0.4)" : "rgba(56, 189, 248, 0.4)";
+            toast.style.color = type === "error" ? "#f87171" : "#38bdf8";
+            toast.classList.remove("opacity-0", "pointer-events-none");
+            toast.classList.add("top-28");
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "pointer-events-none");
+                toast.classList.remove("top-28");
+            }, 3000);
+        }
+
+        async function handleAdminLogout() {
+            if (!confirm("Are you sure you want to sign out from the admin panel?")) return;
+            
+            showToast("Signing out...");
+            await logoutUser();
+            setTimeout(() => {
+                window.location.href = "index.html";
+            }, 500);
+        }
+
+        // Expose to global scope
+        window.commitTokenToRegistry = commitTokenToRegistry;
+        window.toggleUserStatusHandler = toggleUserStatusHandler;
+        window.dispatchNotificationMessage = dispatchNotificationMessage;
+        window.switchTab = switchTab;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.showToast = showToast;
+        window.initiateTopupFlow = initiateTopupFlow;
+        window.commitTopupReserves = commitTopupReserves;
+        window.viewUserPrivateKey = viewUserPrivateKey;
+        window.saveTokenPrice = saveTokenPrice;
+        window.toggleTokenVisibility = toggleTokenVisibility;
+        window.removeTokenHandler = removeTokenHandler;
+        window.saveTreasuryPoolHandler = saveTreasuryPoolHandler;
+        window.refreshTreasuryBalance = refreshTreasuryBalance;
+        window.generateTreasuryQR = generateTreasuryQR;
+        window.saveFees = saveFees;
+        window.autoFetchContractInfo = autoFetchContractInfo;
+        window.fetchTokenDecimals = fetchTokenDecimals;
+        window.handleAdminLogout = handleAdminLogout;
+    </script>
+</body>
+</html>

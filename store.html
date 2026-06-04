@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrapYard - BSC Meme Token Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    
+    <style>
+        /* Modern Glassmorphism & Custom Properties */
+        :root[data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --card-bg: rgba(30, 41, 59, 0.45);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+        }
+        :root[data-theme="light"] {
+            --bg-gradient: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.65);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #0284c7;
+            --accent-glow: rgba(2, 132, 199, 0.1);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: background 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        /* Hide scrollbars for slick mobile app feel */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="pb-24 max-w-md mx-auto relative shadow-2xl overflow-x-hidden">
+
+    <header class="glass-panel sticky top-0 z-50 px-4 py-3 flex justify-between items-center rounded-b-2xl mx-2 mt-2">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-sky-500/20 rounded-xl text-sky-400">
+                <i data-lucide="layers" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold tracking-tight">ScrapYard</h1>
+                <p class="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+                    <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"></span> BSC Mainnet
+                </p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button id="profileToggle" class="p-2.5 rounded-xl glass-panel text-slate-400 hover:text-emerald-400 transition-all active:scale-95" title="Profile">
+                <i data-lucide="user" class="w-5 h-5"></i>
+            </button>
+            <button id="themeToggle" class="p-2.5 rounded-xl glass-panel text-slate-400 hover:text-sky-400 transition-all active:scale-95">
+                <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="px-4 pt-4 min-h-[calc(100vh-160px)]">
+        
+        <section id="storePage" class="space-y-6">
+            <div class="space-y-1">
+                <h2 class="text-2xl font-extrabold tracking-tight">Scrap Store</h2>
+                <p class="text-xs text-slate-400" style="color: var(--text-muted)">Exchange BNB instantly for exclusive curated micro-cap scrap assets.</p>
+            </div>
+
+            <div id="storeGrid" class="space-y-4">
+                </div>
+        </section>
+
+        <section id="walletPage" class="space-y-6 hidden">
+            <div class="space-y-1">
+                <h2 class="text-2xl font-extrabold tracking-tight">My Custodial Vault</h2>
+                <p class="text-xs" style="color: var(--text-muted)">Securely hosted web3 trading environment.</p>
+            </div>
+
+            <div class="glass-panel rounded-3xl p-6 relative overflow-hidden glow-effect">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-sky-500/10 rounded-full blur-2xl"></div>
+                
+                <div class="flex justify-between items-start mb-4">
+                    <div class="flex-1">
+                        <p class="text-xs uppercase tracking-widest opacity-60 font-medium">Estimated Value</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <h3 id="totalWalletValue" class="text-3xl font-black">$0.00 <span class="text-xs font-normal text-slate-400">USD</span></h3>
+                            <button onclick="manualRefreshWalletBalance()" id="balanceRefreshBtn" class="p-2 rounded-lg hover:bg-sky-500/20 transition-all active:scale-90" title="Refresh balance now">
+                                <i data-lucide="refresh-cw" class="w-5 h-5 text-sky-400 hover:text-sky-300"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-mono glass-panel px-2.5 py-1 rounded-full text-sky-400 border-sky-500/20">Custodial Active</span>
+                </div>
+
+                <div class="pt-2 border-t border-white/5 flex items-center justify-between font-mono text-xs opacity-80">
+                    <span class="truncate pr-4" id="walletAddressDisplay">Address: Generating...</span>
+                    <button onclick="copyAddress()" class="text-sky-400 hover:underline shrink-0 flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 mt-6">
+                    <button onclick="openModal('receiveModal')" class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-sky-500/10 transition-all group">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="arrow-down-left" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-medium">Receive</span>
+                    </button>
+                    <button onclick="openModal('sendModal')" class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-amber-500/10 transition-all group">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="arrow-up-right" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-medium">Send</span>
+                    </button>
+                    <button onclick="openModal('historyModal')" class="flex flex-col items-center gap-2 p-3 rounded-2xl bg-white/5 hover:bg-slate-500/10 transition-all group">
+                        <div class="w-10 h-10 rounded-xl bg-slate-500/20 text-slate-400 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="history" class="w-5 h-5"></i>
+                        </div>
+                        <span class="text-xs font-medium">History</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between border-amber-500/10 bg-amber-500/5">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-amber-500/20 text-amber-400 rounded-xl">
+                        <i data-lucide="fuel" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold">Network Gas Balance (BNB)</h4>
+                        <p id="bnbBalanceDisplay" class="text-sm font-mono text-amber-400 font-bold">0.0000 BNB</p>
+                    </div>
+                </div>
+                <span id="bnbPriceDisplay" class="text-[10px] font-bold text-amber-300">💹 $0.00</span>
+            </div>
+
+            <div class="space-y-3">
+                <h4 class="text-sm font-bold tracking-wide text-slate-400 uppercase" style="color: var(--text-muted)">Your Assets</h4>
+                <div id="walletTokenList" class="space-y-3">
+                    </div>
+            </div>
+        </section>
+
+    </main>
+
+    <div id="purchaseModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-md rounded-t-3xl p-6 space-y-4 transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-black">Confirm Scrap Purchase</h3>
+                <button onclick="closeModal('purchaseModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <!-- Token Info -->
+            <div class="bg-white/5 p-4 rounded-2xl space-y-2">
+                <div class="flex justify-between text-xs text-slate-400"><span style="color: var(--text-muted)">Token</span><span id="modalTokenName" class="font-bold text-white">---</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span style="color: var(--text-muted)">Admin Rate</span><span id="modalTokenRate" class="font-mono text-sky-400">---</span></div>
+                <div class="flex justify-between text-xs text-slate-400"><span style="color: var(--text-muted)">Treasury Liquidity</span><span id="modalPoolSupply" class="font-mono text-emerald-400">---</span></div>
+            </div>
+            
+            <!-- User Input -->
+            <div>
+                <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">USD Worth of Tokens to Receive</label>
+                <div class="flex items-center gap-2">
+                    <input id="modalUsdAmount" type="number" min="0" step="0.01" value="10" oninput="recalcPurchaseTotal()" class="flex-1 bg-slate-900/50 text-white rounded-xl p-3 border border-white/10 text-sm font-mono focus:outline-none focus:border-sky-500">
+                    <span class="text-xs font-mono text-slate-400 px-2" style="color: var(--text-muted)">USD</span>
+                </div>
+                <p class="text-[10px] text-slate-500 mt-1" style="color: var(--text-muted)"><span id="modalMinNote">Min: $1.00</span></p>
+            </div>
+            
+            <!-- Breakdown -->
+            <div class="space-y-2">
+                <div class="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl">
+                    <div class="text-[10px] text-emerald-400/70 mb-1">Tokens You'll Receive</div>
+                    <div class="flex items-baseline gap-2">
+                        <span id="modalTokenQty" class="text-xl font-black text-emerald-400">0.00</span>
+                        <span id="modalTokenSymbol" class="text-xs font-bold text-emerald-400/60">TOKEN</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-sky-500/10 border border-sky-500/20 p-3 rounded-xl">
+                        <div class="text-[10px] text-sky-400/70 mb-1">USD Cost</div>
+                        <div id="modalUsdCost" class="text-lg font-black text-sky-400">$0.00</div>
+                    </div>
+                    <div class="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl">
+                        <div class="text-[10px] text-amber-400/70 mb-1">BNB Required</div>
+                        <div id="modalBnbCost" class="text-lg font-black text-amber-400">0.0000 BNB</div>
+                    </div>
+                </div>
+            </div>
+            
+            <button onclick="executePurchase()" class="w-full py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold tracking-wide transition-all shadow-lg glow-effect">
+                Authorize Custodial Swap
+            </button>
+        </div>
+    </div>
+
+    <div id="receiveModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 space-y-4 transform scale-95 transition-transform duration-300 text-center">
+            <h3 class="text-lg font-black text-left">Receive Assets</h3>
+            <p class="text-xs text-left text-slate-400" style="color: var(--text-muted)">Deposit BNB to pay network gas fees or send scrap tokens into this custodial address.</p>
+            <div class="w-48 h-48 bg-white mx-auto rounded-2xl flex items-center justify-center p-2 shadow-inner overflow-hidden">
+                <img id="receiveQRCode" src="" alt="Wallet QR Code" class="w-full h-full rounded-xl">
+            </div>
+            <p id="receiveAddressText" class="text-xs font-mono bg-white/5 p-3 rounded-xl break-all select-all"></p>
+            <button onclick="closeModal('receiveModal')" class="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 font-bold text-sm transition-all">
+                Close View
+            </button>
+        </div>
+    </div>
+
+    <div id="sendModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-md rounded-t-3xl p-6 space-y-4 transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-black">Send Scrap Asset Out</h3>
+                <button onclick="closeModal('sendModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Select Asset</label>
+                    <select id="sendTokenSelect" class="w-full bg-slate-900/50 text-white rounded-xl p-3 border border-white/10 text-sm focus:outline-none focus:border-sky-500"></select>
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-1" style="color: var(--text-muted)">Recipient Cross-Chain/BSC Address</label>
+                    <input id="sendRecipient" type="text" placeholder="0x..." class="w-full bg-slate-900/50 text-white rounded-xl p-3 border border-white/10 text-sm font-mono focus:outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="text-xs font-bold text-slate-400 block mb-1 flex justify-between" style="color: var(--text-muted)"><span>Amount</span><button onclick="maxSendAmount()" class="text-[10px] bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 px-2 py-0.5 rounded">MAX</button></label>
+                    <input id="sendAmount" type="number" placeholder="0.00" oninput="updateSendUsdDisplay()" class="w-full bg-slate-900/50 text-white rounded-xl p-3 border border-white/10 text-sm font-mono focus:outline-none focus:border-sky-500">
+                    <div class="text-[10px] text-slate-400 mt-1 text-right" style="color: var(--text-muted)" id="sendUsdDisplay">≈ $0.00 USD</div>
+                </div>
+            </div>
+            <button onclick="executeSend()" class="w-full py-4 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black tracking-wide transition-all shadow-lg">
+                Broadcast Outbound Transaction
+            </button>
+        </div>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden opacity-0 transition-opacity duration-300 p-4">
+        <div class="glass-panel w-full max-w-sm rounded-3xl p-6 space-y-4 transform scale-95 transition-transform duration-300 max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-black">Transaction Registry</h3>
+                <button onclick="closeModal('historyModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div id="historyLogList" class="overflow-y-auto space-y-3 flex-1 pr-1 text-xs">
+                <p class="text-slate-400 text-center py-8" style="color: var(--text-muted)">No recorded ecosystem ledger history yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="profileModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-panel w-full max-w-md rounded-t-3xl p-6 space-y-4 transform translate-y-full transition-transform duration-300 max-h-[85vh] flex flex-col">
+            <div class="flex justify-between items-center shrink-0">
+                <h3 class="text-lg font-black flex items-center gap-2">
+                    <i data-lucide="user-circle" class="w-6 h-6"></i> Profile Settings
+                </h3>
+                <button onclick="closeModal('profileModal')" class="p-1 rounded-lg hover:bg-white/10"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="overflow-y-auto flex-1 space-y-4 pr-2">
+                <!-- User Info Section -->
+                <div class="glass-panel rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-sm flex items-center gap-2">
+                        <i data-lucide="info" class="w-4 h-4"></i> Account Information
+                    </h4>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Username</label>
+                            <p id="profileUsername" class="text-xs bg-white/5 p-2 rounded-lg">-</p>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Wallet Address</label>
+                            <p id="profileWalletAddress" class="text-xs font-mono bg-white/5 p-2 rounded-lg break-all">-</p>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 block mb-1">Account Status</label>
+                            <p id="profileStatus" class="text-xs bg-white/5 p-2 rounded-lg">Active</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Balance Section -->
+                <div class="glass-panel rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-sm flex items-center gap-2">
+                        <i data-lucide="trending-up" class="w-4 h-4"></i> Wallet Balance
+                    </h4>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 block mb-1">BNB Balance (from RPC)</label>
+                        <p id="profileRpcBalance" class="text-sm font-mono font-bold text-amber-400 bg-white/5 p-2 rounded-lg">Loading...</p>
+                    </div>
+                    <button onclick="refreshRpcBalance()" class="w-full py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold text-xs transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh Balance
+                    </button>
+                </div>
+
+                <!-- Update Email Section -->
+                <div class="glass-panel rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-sm flex items-center gap-2">
+                        <i data-lucide="mail" class="w-4 h-4"></i> Email Address
+                    </h4>
+                    <div class="space-y-2">
+                        <input type="email" id="profileNewEmail" placeholder="Enter new email" class="w-full bg-white/10 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-sky-500 text-white placeholder-slate-500">
+                        <button onclick="handleUpdateEmail()" class="w-full py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold text-xs transition-all">
+                            Update Email
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Update Password Section -->
+                <div class="glass-panel rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-sm flex items-center gap-2">
+                        <i data-lucide="key" class="w-4 h-4"></i> Password
+                    </h4>
+                    <div class="space-y-2">
+                        <input type="password" id="profileNewPassword" placeholder="Enter new password" class="w-full bg-white/10 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-sky-500 text-white placeholder-slate-500">
+                        <input type="password" id="profileConfirmPassword" placeholder="Confirm password" class="w-full bg-white/10 border border-white/10 rounded-lg p-2 text-xs focus:outline-none focus:border-sky-500 text-white placeholder-slate-500">
+                        <button onclick="handleUpdatePassword()" class="w-full py-2 rounded-lg bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 font-bold text-xs transition-all">
+                            Update Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logout Button -->
+            <button onclick="handleLogout()" class="w-full py-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-bold text-sm transition-all flex items-center justify-center gap-2 mt-2">
+                <i data-lucide="log-out" class="w-4 h-4"></i> Logout
+            </button>
+        </div>
+    </div>
+
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md glass-panel rounded-t-3xl px-6 py-3 flex justify-around items-center z-40 border-t border-white/10">
+        <button onclick="switchTab('store')" id="tab-store" class="flex flex-col items-center gap-1 text-sky-400 transition-all active:scale-95">
+            <i data-lucide="store" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold tracking-wider uppercase">Store</span>
+        </button>
+        <button onclick="switchTab('wallet')" id="tab-wallet" class="flex flex-col items-center gap-1 text-slate-400 hover:text-sky-400 transition-all active:scale-95">
+            <i data-lucide="wallet" class="w-5 h-5"></i>
+            <span class="text-[10px] font-bold tracking-wider uppercase">Wallet</span>
+        </button>
+    </nav>
+
+    <div id="toast" class="fixed top-20 left-1/2 -translate-x-1/2 glass-panel border-sky-500/30 px-4 py-2.5 rounded-xl text-xs font-bold tracking-wide shadow-xl transition-all duration-300 opacity-0 pointer-events-none z-50 text-center text-sky-400">
+        Toast notification output text string.
+    </div>
+
+    <script type="module">
+        import { 
+            subscribeToAuthState, 
+            getTokens, 
+            subscribeToVisibleTokens,
+            getUserWallet,
+            subscribeToWallet,
+            updateWalletBalance,
+            createTransaction,
+            subscribeToUserTransactions,
+            executeTokenSwap,
+            getTokenLiquidityOnChain,
+            getTokenBalanceOnChain,
+            fetchMajorTokenPrice,
+            fetchTokenPriceBySymbol,
+            logoutUser,
+            getBnbPriceFromFirestore,
+            initializeSystemSettings,
+            savePrivateKey,
+            saveWalletAddress,
+            getWalletAddress,
+            getPrivateKey,
+            getTreasuryPool,
+            getUserProfile,
+            updateUserEmail,
+            updateUserPassword,
+            getBnbBalanceFromRpc,
+            getRpcConfig
+        } from './firestore-service.js';
+        import { subscribeToBnbPrice } from './coingecko-service.js';
+        import { auth } from './firebase-config.js';
+
+        let ADMIN_STORE_REGISTRY = [];
+        let userWalletInstance = null;
+        let userWalletAddress = null;
+        let userBnbBalance = 0;
+        let tokenBalances = {};
+        let activeSelectedStoreTokenId = null;
+        let transactionLogs = [];
+        let BNB_PRICE_USD = 400;
+        let currentUser = null;
+        let unsubscribeWallet = null;
+        let unsubscribeTransactions = null;
+        let unsubscribeBnbPrice = null;
+        let autoRefreshIntervalId = null;
+        let globalTokenPriceCache = {};  // Cache for CoinGecko prices
+
+        // --- CORE LIFECYCLE MANAGEMENT INIT FUNCTION ---
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            initThemeFramework();
+            initBnbPriceSubscription();
+            initAuthCheck();
+        });
+
+        function initBnbPriceSubscription() {
+            // Subscribe to real-time BNB price updates from CoinGecko (primary) with Firestore fallback
+            unsubscribeBnbPrice = subscribeToBnbPrice((newPrice) => {
+                if (newPrice > 0) {
+                    BNB_PRICE_USD = newPrice;
+                    document.getElementById("bnbPriceDisplay").innerText = `💹 $${newPrice.toFixed(2)}`;
+                    console.log(`✅ Real-time BNB Price from CoinGecko: $${newPrice.toFixed(2)}`);
+                    // Update wallet display with new BNB price
+                    updateGlobalWalletBalances();
+                }
+            });
+        }
+
+        function initAuthCheck() {
+            subscribeToAuthState((user) => {
+                if (!user) {
+                    window.location.href = "index.html";
+                    return;
+                }
+                
+                currentUser = user;
+                initializeCustodialWallet();
+                initializeRealtimeListeners();
+            });
+        }
+
+        function initializeRealtimeListeners() {
+            // Real-time subscription to ONLY store-visible tokens (admin-published).
+            // NOTE: CoinGecko prices are ONLY for display (wallet balance, liquidity USD value)
+            // Swapping ALWAYS uses admin-set presetUsdPrice
+            subscribeToVisibleTokens((tokens) => {
+                ADMIN_STORE_REGISTRY = tokens;
+                renderStorefrontEngine();
+                updateGlobalWalletBalances();
+            });
+
+            // Real-time subscription to user wallet
+            unsubscribeWallet = subscribeToWallet(currentUser.uid, (wallet) => {
+                if (wallet) {
+                    userBnbBalance = wallet.bnbBalance || 0;
+                    tokenBalances = wallet.tokenBalances || {};
+                    updateGlobalWalletBalances();
+                }
+            });
+
+            // Real-time subscription to transactions
+            unsubscribeTransactions = subscribeToUserTransactions(currentUser.uid, (transactions) => {
+                transactionLogs = transactions;
+            });
+
+            // Auto-refresh wallet balance every 1 minute (60000 ms)
+            autoRefreshIntervalId = setInterval(() => {
+                manualRefreshWalletBalance();
+            }, 60000);
+        }
+
+        // --- CUSTODIAL ETHERS.JS CRYPTO ENGINE WALLET MANAGEMENT ---
+        async function initializeCustodialWallet() {
+            try {
+                // Check if wallet already exists in Firestore
+                const existingAddress = await getWalletAddress(currentUser.uid);
+                
+                if (existingAddress) {
+                    // Use existing wallet
+                    userWalletAddress = existingAddress;
+                    document.getElementById("walletAddressDisplay").innerText = `Addr: ${existingAddress.substring(0,6)}...${existingAddress.substring(existingAddress.length - 4)}`;
+                    document.getElementById("receiveAddressText").innerText = existingAddress;
+                    generateWalletQR(existingAddress);
+                    console.log('✅ Loaded existing wallet address');
+                } else {
+                    // Create new wallet and save to Firestore
+                    userWalletInstance = ethers.Wallet.createRandom();
+                    const address = userWalletInstance.address;
+                    const privateKey = userWalletInstance.privateKey;
+                    userWalletAddress = address;
+                    
+                    // Save private key to Firestore (encoded for security)
+                    await savePrivateKey(currentUser.uid, privateKey);
+                    
+                    // Save wallet address to Firestore
+                    await saveWalletAddress(currentUser.uid, address);
+                    
+                    // Display wallet address
+                    document.getElementById("walletAddressDisplay").innerText = `Addr: ${address.substring(0,6)}...${address.substring(address.length - 4)}`;
+                    document.getElementById("receiveAddressText").innerText = address;
+                    generateWalletQR(address);
+                    
+                    console.log('✅ New wallet created and saved to Firestore');
+                    showToast('🔐 Wallet created and secured');
+                }
+
+                // Initialize wallet in Firestore if doesn't exist
+                const wallet = await getUserWallet(currentUser.uid);
+                if (wallet && !wallet.bnbBalance) {
+                    await updateWalletBalance(currentUser.uid, 0, {});
+                }
+            } catch (err) {
+                console.error('Wallet initialization error:', err);
+                showToast("Failed to initialize wallet runtime.", "error");
+            }
+        }
+
+        // --- THEME INTERACTION ENGINE CAPABILITIES ---
+        function initThemeFramework() {
+            const currentTheme = localStorage.getItem("theme") || "dark";
+            document.documentElement.setAttribute("data-theme", currentTheme);
+            adjustThemeUiVisualStates(currentTheme);
+
+            document.getElementById("themeToggle").addEventListener("click", () => {
+                const targetTheme = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", targetTheme);
+                localStorage.setItem("theme", targetTheme);
+                adjustThemeUiVisualStates(targetTheme);
+            });
+
+            // Profile toggle handler
+            document.getElementById("profileToggle").addEventListener("click", () => {
+                loadProfileData();
+                openModal("profileModal");
+            });
+        }
+
+        function adjustThemeUiVisualStates(theme) {
+            const iconElement = document.getElementById("themeIcon");
+            if(theme === "dark") {
+                iconElement.setAttribute("data-lucide", "sun");
+                iconElement.classList.remove("text-slate-400");
+                iconElement.classList.add("text-amber-400");
+            } else {
+                iconElement.setAttribute("data-lucide", "moon");
+                iconElement.classList.remove("text-amber-400");
+                iconElement.classList.add("text-slate-600");
+            }
+            lucide.createIcons();
+        }
+
+        // --- RENDER DYNAMICS ROUTING UI ENGINE ---
+        function switchTab(targetTab) {
+            const storePage = document.getElementById("storePage");
+            const walletPage = document.getElementById("walletPage");
+            const btnStore = document.getElementById("tab-store");
+            const btnWallet = document.getElementById("tab-wallet");
+
+            if (targetTab === 'store') {
+                storePage.classList.remove("hidden");
+                walletPage.classList.add("hidden");
+                btnStore.className = "flex flex-col items-center gap-1 text-sky-400 transition-all active:scale-95";
+                btnWallet.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-sky-400 transition-all active:scale-95";
+            } else {
+                storePage.classList.add("hidden");
+                walletPage.classList.remove("hidden");
+                btnStore.className = "flex flex-col items-center gap-1 text-slate-400 hover:text-sky-400 transition-all active:scale-95";
+                btnWallet.className = "flex flex-col items-center gap-1 text-sky-400 transition-all active:scale-95";
+                updateGlobalWalletBalances();
+            }
+        }
+
+        async function renderStorefrontEngine() {
+            const storeGrid = document.getElementById("storeGrid");
+            storeGrid.innerHTML = "";
+
+            if (ADMIN_STORE_REGISTRY.length === 0) {
+                storeGrid.innerHTML = `
+                    <div class="text-center py-12 glass-panel rounded-2xl border-dashed border-white/10">
+                        <p class="text-xs text-slate-400" style="color: var(--text-muted)">No scrap tokens are live in the store yet. Check back soon.</p>
+                    </div>`;
+                return;
+            }
+
+            const treasury = await getTreasuryPool();
+            const treasuryAddr = treasury?.address || '';
+            
+            // Filter to only show tokens with liquidity > 0
+            const tokensWithLiquidity = [];
+
+            for (const token of ADMIN_STORE_REGISTRY) {
+                let realLiquidity = 0;
+                
+                // Load real on-chain liquidity
+                if (token.contract && token.decimals !== undefined && treasuryAddr) {
+                    const liquidity = await getTokenLiquidityOnChain(token.contract, treasuryAddr, token.decimals);
+                    if (liquidity.success) {
+                        realLiquidity = liquidity.liquidity;
+                    }
+                }
+                
+                // Only show tokens with liquidity > 0
+                if (realLiquidity > 0) {
+                    tokensWithLiquidity.push({ token, realLiquidity });
+                }
+            }
+
+            if (tokensWithLiquidity.length === 0) {
+                storeGrid.innerHTML = `
+                    <div class="text-center py-12 glass-panel rounded-2xl border-dashed border-white/10">
+                        <p class="text-xs text-slate-400" style="color: var(--text-muted)">No tokens with available liquidity. Check back later.</p>
+                    </div>`;
+                return;
+            }
+
+            for (const { token, realLiquidity } of tokensWithLiquidity) {
+                const logo = token.logoUrl
+                    ? `<img src="${token.logoUrl}" alt="${token.symbol}" class="w-12 h-12 rounded-xl object-cover shadow-md bg-slate-800" onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(token.symbol)}&background=0f172a&color=38bdf8&bold=true&size=128'">`
+                    : `<div class="w-12 h-12 rounded-xl bg-gradient-to-tr ${token.color || 'from-blue-500 to-indigo-600'} flex items-center justify-center text-xl shadow-md">${token.icon || '💎'}</div>`;
+
+                const cardHtml = `
+                    <div class="glass-panel p-4 rounded-2xl space-y-2 hover:border-sky-500/30 transition-all">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                ${logo}
+                                <div>
+                                    <h4 class="font-bold text-base">${token.name}</h4>
+                                    <div class="flex items-center gap-2 mt-0.5">
+                                        <span class="text-[10px] font-mono glass-panel px-1.5 py-0.5 rounded text-slate-300 bg-white/5">${token.symbol}</span>
+                                        <span class="text-[11px] font-mono text-emerald-400">${formatNumberWithAbbrev(token.tokensPer1Usd, 6)} tokens/$1 USD</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="initiatePurchaseFlow('${token.id}')" class="px-3 py-2 text-xs font-black bg-white/10 hover:bg-sky-500/20 text-sky-400 hover:text-white rounded-xl transition-all border border-white/5 hover:border-sky-500/20">
+                                Swap
+                            </button>
+                        </div>
+                        <div class="flex justify-between items-center text-[10px] bg-white/[0.02] p-2 rounded-lg">
+                            <span class="text-slate-400">Treasury Liquidity:</span>
+                            <span class="font-mono font-bold text-emerald-400">${formatNumberWithAbbrev(realLiquidity, 2)} ${token.symbol}</span>
+                        </div>
+                    </div>
+                `;
+                storeGrid.insertAdjacentHTML("beforeend", cardHtml);
+            }
+        }
+
+        async function updateGlobalWalletBalances() {
+            // Update BNB balance with real-time value
+            const bnbValueUsd = userBnbBalance * BNB_PRICE_USD;
+            document.getElementById("bnbBalanceDisplay").innerText = `${formatNumberWithAbbrev(userBnbBalance, 4)} BNB`;
+            
+            const listContainer = document.getElementById("walletTokenList");
+            const sendSelect = document.getElementById("sendTokenSelect");
+            
+            listContainer.innerHTML = "";
+            sendSelect.innerHTML = "";
+            
+    let incrementalTotalValueUsd = bnbValueUsd; // Include BNB in total
+            let activelyRenderedCount = 0;
+            const tokenPriceCache = {};
+
+            // Fetch CoinGecko prices for tokens with balance
+            const tokensWithBalance = ADMIN_STORE_REGISTRY.filter(t => (tokenBalances[t.id] || 0) > 0);
+            for (const token of tokensWithBalance) {
+                try {
+                    const priceResult = await fetchTokenPriceBySymbol(token.symbol);
+                    if (priceResult.success) {
+                        tokenPriceCache[token.id] = priceResult.price;
+                        globalTokenPriceCache[token.id] = priceResult.price;
+                    } else {
+                        // Fallback to admin preset price if CoinGecko fails
+                        tokenPriceCache[token.id] = token.presetUsdPrice;
+                    }
+                } catch (e) {
+                    console.warn(`Failed to fetch price for ${token.symbol}:`, e);
+                    tokenPriceCache[token.id] = token.presetUsdPrice;
+                }
+            }
+
+            // Render only tokens with balance
+            for (const token of tokensWithBalance) {
+                const userBalance = tokenBalances[token.id] || 0;
+                const realPrice = tokenPriceCache[token.id] || token.presetUsdPrice;
+                const tokenAssetValueUsd = userBalance * realPrice;
+                incrementalTotalValueUsd += tokenAssetValueUsd;
+                activelyRenderedCount++;
+                
+                const rowHtml = `
+                    <div class="glass-panel p-4 rounded-xl flex items-center justify-between bg-white/[0.02]">
+                        <div class="flex items-center gap-3">
+                            <span class="text-xl">${token.icon}</span>
+                            <div>
+                                <h5 class="text-sm font-bold">${token.name}</h5>
+                                <p class="text-xs font-mono text-slate-400" style="color: var(--text-muted)">${formatNumberWithAbbrev(userBalance, token.decimals || 18)} ${token.symbol}</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-sky-400 font-mono">~$${formatNumberWithAbbrev(tokenAssetValueUsd, 2)}</p>
+                        </div>
+                    </div>
+                `;
+                listContainer.insertAdjacentHTML("beforeend", rowHtml);
+
+                const optionHtml = `<option value="${token.id}">${token.name} (${token.symbol})</option>`;
+                sendSelect.insertAdjacentHTML("beforeend", optionHtml);
+            }
+
+            if (activelyRenderedCount === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 glass-panel rounded-2xl border-dashed border-white/5">
+                        <p class="text-xs text-slate-400" style="color: var(--text-muted)">No matching scrap tokens found with active balances inside wallet.</p>
+                    </div>
+                `;
+            }
+
+            document.getElementById("totalWalletValue").innerHTML = `$${formatNumberWithAbbrev(incrementalTotalValueUsd, 2)} <span class="text-xs font-normal text-slate-400">USD</span>`;
+        }
+
+        // --- NUMBER FORMATTING WITH K/M/B ABBREVIATIONS ---
+        function formatNumberWithAbbrev(num, decimals = 2) {
+            if (num === 0 || isNaN(num)) return '0';
+            
+            const absNum = Math.abs(num);
+            let formattedNum;
+            let suffix = '';
+            
+            if (absNum >= 1000000000) {
+                formattedNum = (num / 1000000000).toFixed(decimals);
+                suffix = 'B';
+            } else if (absNum >= 1000000) {
+                formattedNum = (num / 1000000).toFixed(decimals);
+                suffix = 'M';
+            } else if (absNum >= 1000) {
+                formattedNum = (num / 1000).toFixed(decimals);
+                suffix = 'K';
+            } else {
+                formattedNum = num.toFixed(decimals);
+            }
+            
+            return `${formattedNum}${suffix}`;
+        }
+
+        // --- WALLET BALANCE REFRESH ---
+        async function manualRefreshWalletBalance() {
+            if (!currentUser || !userWalletAddress) return;
+            
+            const btn = document.getElementById("balanceRefreshBtn");
+            if (btn) {
+                btn.classList.add("animate-spin");
+            }
+
+            try {
+                const provider = new ethers.JsonRpcProvider('https://bsc-dataseed1.binance.org:443');
+                
+                // Get fresh BNB balance from blockchain
+                const bnbBalanceWei = await provider.getBalance(userWalletAddress);
+                userBnbBalance = parseFloat(ethers.formatEther(bnbBalanceWei));
+                console.log(`✅ Refreshed BNB balance: ${userBnbBalance.toFixed(4)} BNB`);
+
+                // Query all token balances on-chain via contract addresses
+                const updatedTokenBalances = { ...tokenBalances };
+                
+                for (const token of ADMIN_STORE_REGISTRY) {
+                    if (!token.contract || token.decimals === undefined) {
+                        console.warn(`Skipping token ${token.symbol}: missing contract or decimals`);
+                        continue;
+                    }
+
+                    try {
+                        const balanceResult = await getTokenBalanceOnChain(
+                            token.contract,
+                            userWalletAddress,
+                            token.decimals
+                        );
+
+                        if (balanceResult.success && balanceResult.balance > 0) {
+                            updatedTokenBalances[token.id] = balanceResult.balance;
+                            console.log(`✅ ${token.symbol}: ${balanceResult.balance.toFixed(4)}`);
+                        } else if (balanceResult.success) {
+                            // Set to 0 or remove if balance is zero
+                            updatedTokenBalances[token.id] = 0;
+                        }
+                    } catch (error) {
+                        console.error(`Failed to query ${token.symbol}:`, error);
+                    }
+                }
+
+                tokenBalances = updatedTokenBalances;
+
+                // Save all balances to Firestore
+                await updateWalletBalance(currentUser.uid, userBnbBalance, updatedTokenBalances);
+
+                // Update display immediately
+                updateGlobalWalletBalances();
+                showToast("✅ Wallet balance refreshed from blockchain and saved");
+            } catch (error) {
+                console.error("Failed to refresh balance:", error);
+                showToast("Failed to refresh balance", "error");
+            } finally {
+                if (btn) {
+                    btn.classList.remove("animate-spin");
+                }
+            }
+        }
+
+        // --- SYSTEM SWAP FLOW (routed through admin treasury pool) ---
+        async function initiatePurchaseFlow(tokenId) {
+            const token = ADMIN_STORE_REGISTRY.find(t => t.id === tokenId);
+            if(!token) return;
+
+            activeSelectedStoreTokenId = tokenId;
+
+            document.getElementById("modalTokenName").innerText = `${token.name} (${token.symbol})`;
+            document.getElementById("modalTokenRate").innerText = `${formatNumberWithAbbrev(token.tokensPer1Usd, 6)} tokens per 1 USD`;
+            document.getElementById("modalTokenSymbol").innerText = token.symbol;
+            const minSwap = token.minSwapUsd || 1;
+            document.getElementById("modalUsdAmount").value = minSwap.toString();
+            document.getElementById("modalUsdAmount").min = minSwap.toString();
+            
+            // Load real liquidity
+            if (token.contract && token.decimals !== undefined) {
+                const treasury = await getTreasuryPool();
+                const treasuryAddr = treasury?.address || '';
+                if (treasuryAddr) {
+                    const liquidity = await getTokenLiquidityOnChain(token.contract, treasuryAddr, token.decimals);
+                    if (liquidity.success) {
+                        document.getElementById("modalPoolSupply").innerText = `${liquidity.liquidity.toLocaleString('en-US', {maximumFractionDigits: 2})} ${token.symbol}`;
+                    }
+                }
+            }
+            
+            recalcPurchaseTotal();
+            openModal("purchaseModal");
+        }
+
+        function recalcPurchaseTotal() {
+            const token = ADMIN_STORE_REGISTRY.find(t => t.id === activeSelectedStoreTokenId);
+            if (!token) return;
+            const minSwap = token.minSwapUsd || 1;
+            const usdAmountDesired = parseFloat(document.getElementById("modalUsdAmount").value) || 0;
+            
+            // Update minimum note
+            document.getElementById("modalMinNote").innerText = `Min: $${minSwap.toFixed(2)}`;
+            
+            if (usdAmountDesired < minSwap) {
+                // Show warning but still calculate
+                document.getElementById("modalTokenQty").innerText = "---";
+                document.getElementById("modalUsdCost").innerText = "---";
+                document.getElementById("modalBnbCost").innerText = "---";
+                return;
+            }
+            
+            // CORRECT CALCULATION:
+            // Token quantity = USD amount THEY WANT TO RECEIVE / token market price
+            const tokenPrice = globalTokenPriceCache[token.id] || token.presetUsdPrice || 1;
+            const tokenQty = usdAmountDesired / tokenPrice;
+            
+            // USD cost to get those tokens = USD amount × discount rate set by admin
+            // If admin says 0.0001 USD cost per $1 worth, and user wants $100 worth, cost = 100 × 0.0001 = $0.01
+            const usdCost = usdAmountDesired * token.tokensPer1Usd;
+            
+            // BNB cost = USD cost / BNB price
+            const bnbCost = usdCost / BNB_PRICE_USD;
+            
+            document.getElementById("modalTokenQty").innerText = tokenQty.toLocaleString('en-US', {maximumFractionDigits: 6});
+            document.getElementById("modalUsdCost").innerText = `$${usdCost.toFixed(2)}`;
+            document.getElementById("modalBnbCost").innerText = `${bnbCost.toFixed(6)} BNB`;
+        }
+
+        async function executePurchase() {
+            const token = ADMIN_STORE_REGISTRY.find(t => t.id === activeSelectedStoreTokenId);
+            if (!token) return;
+
+            const minSwap = token.minSwapUsd || 1;
+            const usdAmount = parseFloat(document.getElementById("modalUsdAmount").value) || 0;
+            if (isNaN(usdAmount) || usdAmount < minSwap) {
+                showToast(`Minimum swap is $${minSwap.toFixed(2)} USD`, "error");
+                return;
+            }
+            
+            // CORRECT CALCULATION:
+            // Token quantity = USD amount THEY RECEIVE / token market price
+            const tokenPrice = globalTokenPriceCache[token.id] || token.presetUsdPrice || 1;
+            const tokenQty = usdAmount / tokenPrice;
+
+            // Check real on-chain liquidity
+            if (token.contract && token.decimals !== undefined) {
+                const treasury = await getTreasuryPool();
+                const treasuryAddr = treasury?.address || '';
+                const liquidity = await getTokenLiquidityOnChain(token.contract, treasuryAddr, token.decimals);
+                if (!liquidity.success || liquidity.liquidity < tokenQty) {
+                    showToast(`Insufficient on-chain liquidity. Available: ${liquidity.liquidity.toFixed(4)} ${token.symbol}`, "error");
+                    return;
+                }
+            }
+
+            // USD cost = USD amount × discount rate
+            const usdCost = usdAmount * token.tokensPer1Usd;
+            // BNB cost = USD cost / BNB price
+            const bnbCost = usdCost / BNB_PRICE_USD;
+            if (userBnbBalance < bnbCost) {
+                showToast("Insufficient BNB balance for this swap", "error");
+                return;
+            }
+
+            showToast("Executing real token transfer...");
+            closeModal("purchaseModal");
+
+            try {
+                // Retrieve user's private key and treasury address
+                const userPrivateKey = await getPrivateKey(currentUser.uid);
+                const treasury = await getTreasuryPool();
+                const treasuryAddress = treasury?.address || '';
+
+                if (!userPrivateKey) {
+                    showToast("Wallet not initialized. Please refresh and try again.", "error");
+                    return;
+                }
+
+                if (!treasuryAddress) {
+                    showToast("Treasury not configured. Contact admin.", "error");
+                    return;
+                }
+
+                // Execute real blockchain swap
+                const result = await executeTokenSwap({
+                    userId: currentUser.uid,
+                    tokenId: activeSelectedStoreTokenId,
+                    tokenAmount: tokenQty,
+                    bnbPriceUsd: BNB_PRICE_USD,
+                    userPrivateKey: userPrivateKey,
+                    treasuryAddress: treasuryAddress,
+                    userAddress: userWalletAddress
+                });
+
+                if (result.success) {
+                    const msg = result.bnbTxHash ? 
+                        `✅ Swapped! BNB Tx: ${result.bnbTxHash.substring(0,10)}... Token Tx: ${result.tokenTxHash.substring(0,10)}...` :
+                        `✅ Swapped ${result.bnbCost.toFixed(6)} BNB for ${tokenQty.toFixed(4)} ${token.symbol}!`;
+                    showToast(msg);
+                } else {
+                    showToast(result.error, "error");
+                }
+            } catch (error) {
+                console.error("Purchase error:", error);
+                showToast(error.message, "error");
+            }
+        }
+
+        function maxSendAmount() {
+            const selectedTokenId = document.getElementById("sendTokenSelect").value;
+            if (!selectedTokenId) {
+                showToast("Select a token first", "error");
+                return;
+            }
+            const maxAmount = tokenBalances[selectedTokenId] || 0;
+            document.getElementById("sendAmount").value = maxAmount.toFixed(6);
+            updateSendUsdDisplay();
+        }
+
+        function updateSendUsdDisplay() {
+            const selectedTokenId = document.getElementById("sendTokenSelect").value;
+            const amount = parseFloat(document.getElementById("sendAmount").value) || 0;
+            
+            if (!selectedTokenId) return;
+            const token = ADMIN_STORE_REGISTRY.find(t => t.id === selectedTokenId);
+            if (token) {
+                // Use CoinGecko price from global cache for accurate USD display
+                const usdPrice = globalTokenPriceCache[selectedTokenId] || token.presetUsdPrice || token.tokensPer1Usd;
+                const usdValue = amount * usdPrice;
+                document.getElementById("sendUsdDisplay").innerText = `≈ $${usdValue.toFixed(2)} USD`;
+            }
+        }
+
+        async function executeSend() {
+            const selectedTokenId = document.getElementById("sendTokenSelect").value;
+            const recipient = document.getElementById("sendRecipient").value.trim();
+            const amountStr = document.getElementById("sendAmount").value;
+            const amount = parseFloat(amountStr);
+
+            if (!selectedTokenId) {
+                showToast("Select a token to send", "error");
+                return;
+            }
+            if (!ethers.isAddress(recipient)) {
+                showToast("Invalid recipient address format", "error");
+                return;
+            }
+            if (isNaN(amount) || amount <= 0 || amount > (tokenBalances[selectedTokenId] || 0)) {
+                showToast("Invalid or insufficient token amount", "error");
+                return;
+            }
+
+            showToast("Executing token transfer...");
+            closeModal("sendModal");
+
+            try {
+                const token = ADMIN_STORE_REGISTRY.find(t => t.id === selectedTokenId);
+                if (!token || !token.contract) {
+                    showToast("Token contract not found", "error");
+                    return;
+                }
+
+                // Get user's private key
+                const userPrivateKey = await getPrivateKey(currentUser.uid);
+                if (!userPrivateKey) {
+                    showToast("Wallet not initialized", "error");
+                    return;
+                }
+
+                const { ethers: ethersLib } = await import('https://cdn.jsdelivr.net/npm/ethers@6.7.0/+esm');
+                const provider = new ethersLib.JsonRpcProvider('https://bsc-dataseed1.binance.org:443');
+                const pkeyNorm = userPrivateKey.startsWith('0x') ? userPrivateKey : `0x${userPrivateKey}`;
+                const userWallet = new ethersLib.Wallet(pkeyNorm, provider);
+
+                // ERC20 transfer
+                const erc20ABI = ['function transfer(address to, uint256 amount) returns (bool)'];
+                const tokenContract = new ethersLib.Contract(token.contract, erc20ABI, userWallet);
+                
+                const tokenWei = ethersLib.parseUnits(amount.toString(), token.decimals || 18);
+                const tx = await tokenContract.transfer(recipient, tokenWei);
+                const txHash = tx.hash;
+                await tx.wait();
+
+                // Update wallet balance
+                const newBalances = { ...tokenBalances };
+                newBalances[selectedTokenId] = (newBalances[selectedTokenId] || 0) - amount;
+                await updateWalletBalance(currentUser.uid, userBnbBalance, newBalances);
+
+                showToast(`✅ Sent ${amount} ${token.symbol} to ${recipient.substring(0,6)}...\nTx: ${txHash.substring(0,10)}...`);
+            } catch (error) {
+                console.error("Send error:", error);
+                showToast(error.message, "error");
+            }
+            return;
+
+            try {
+                showToast("Broadcasting transaction to blockchain...");
+                closeModal("sendModal");
+
+                // Update wallet
+                userBnbBalance -= gasFee;
+                tokenBalances[selectedTokenId] -= amount;
+                await updateWalletBalance(currentUser.uid, userBnbBalance, tokenBalances);
+
+                // Log transaction to Firestore
+                const token = ADMIN_STORE_REGISTRY.find(t => t.id === selectedTokenId);
+                const txHash = ethers.id(`tx_${Date.now()}_${Math.random()}`); // Generate pseudo-tx hash
+
+                await createTransaction({
+                    type: "SEND",
+                    description: `Sent ${amount} ${token.symbol} to ${recipient.substring(0, 6)}...${recipient.substring(recipient.length - 4)}`,
+                    gasPaid: gasFee.toFixed(6),
+                    recipient: recipient,
+                    tokenId: selectedTokenId,
+                    amount: amount,
+                    txHash: txHash,
+                    status: "confirmed"
+                });
+
+                showToast(`✅ Sent ${amount} ${token.symbol} successfully!`);
+                updateGlobalWalletBalances();
+
+                // Clear form
+                document.getElementById("sendRecipient").value = "";
+                document.getElementById("sendAmount").value = "";
+            } catch (error) {
+                showToast(error.message, "error");
+            }
+        }
+
+        // --- ELEMENT DRAWER UTILITY CONTROL STRUCTS ---
+        function renderTransactionHistory() {
+            const historyList = document.getElementById("historyLogList");
+            if (!transactionLogs || transactionLogs.length === 0) {
+                historyList.innerHTML = '<p class="text-slate-400 text-center py-8" style="color: var(--text-muted)">No recorded ecosystem ledger history yet.</p>';
+                return;
+            }
+
+            historyList.innerHTML = "";
+            transactionLogs.forEach(tx => {
+                const date = tx.createdAt ? new Date(tx.createdAt.seconds * 1000).toLocaleString() : "Unknown date";
+                const source = tx.source || 'unknown';
+                const isBsc = tx.bnbTxHash || tx.tokenTxHash;
+                
+                let txHtml = `
+                    <div class="bg-white/5 rounded-lg p-3 space-y-2">
+                        <div class="flex justify-between items-start">
+                            <span class="font-semibold">${tx.type}: ${tx.description}</span>
+                            <span class="text-[10px] px-2 py-1 rounded-full ${isBsc ? 'bg-green-500/20 text-green-300' : 'bg-blue-500/20 text-blue-300'}">${source}</span>
+                        </div>
+                        <div class="text-xs text-slate-400">${date}</div>
+                        ${tx.tokenAmount ? `<div class="text-xs">Qty: ${tx.tokenAmount}</div>` : ''}
+                        ${tx.bnbCost ? `<div class="text-xs">BNB: ${parseFloat(tx.bnbCost).toFixed(6)}</div>` : ''}
+                        ${tx.usdCost ? `<div class="text-xs">USD: $${parseFloat(tx.usdCost).toFixed(2)}</div>` : ''}
+                        ${tx.bnbTxHash ? `<div class="text-xs"><a href="https://bscscan.com/tx/${tx.bnbTxHash}" target="_blank" class="text-blue-400 hover:underline">BNB Hash: ${tx.bnbTxHash.substring(0,8)}...</a></div>` : ''}
+                        ${tx.tokenTxHash ? `<div class="text-xs"><a href="https://bscscan.com/tx/${tx.tokenTxHash}" target="_blank" class="text-blue-400 hover:underline">Token Hash: ${tx.tokenTxHash.substring(0,8)}...</a></div>` : ''}
+                    </div>
+                `;
+                historyList.insertAdjacentHTML("beforeend", txHtml);
+            });
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            modal.classList.remove("hidden");
+            setTimeout(() => {
+                modal.classList.remove("opacity-0");
+                const body = modal.querySelector('.transform');
+                body.classList.remove("translate-y-full", "scale-95");
+            }, 10);
+            // Generate QR code when receive modal opens
+            if (id === 'receiveModal' && userWalletAddress) {
+                generateWalletQR(userWalletAddress);
+            }
+            // Render transaction history when history modal opens
+            if (id === 'historyModal') {
+                renderTransactionHistory();
+            }
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            const body = modal.querySelector('.transform');
+            
+            body.classList.add(modal.id.includes('Modal') && !modal.id.includes('receive') && !modal.id.includes('history') ? "translate-y-full" : "scale-95");
+            modal.classList.add("opacity-0");
+            
+            setTimeout(() => {
+                modal.classList.add("hidden");
+            }, 300);
+        }
+
+        function copyAddress() {
+            const addr = userWalletAddress || (userWalletInstance && userWalletInstance.address);
+            if (addr) {
+                navigator.clipboard.writeText(addr);
+                showToast("Address copied securely to system clipboard!");
+            } else {
+                showToast("Wallet address not ready yet", "error");
+            }
+        }
+
+        // --- QR CODE GENERATION ---
+        function generateWalletQR(address) {
+            const img = document.getElementById("receiveQRCode");
+            if (!img || !address) return;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address)}&bgcolor=ffffff&color=0f172a`;
+            img.src = qrUrl;
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.style.borderColor = type === "error" ? "rgba(239, 68, 68, 0.4)" : "rgba(56, 189, 248, 0.4)";
+            toast.style.color = type === "error" ? "#f87171" : "#38bdf8";
+            
+            toast.classList.remove("opacity-0", "pointer-events-none");
+            toast.classList.add("top-24");
+
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "pointer-events-none");
+                toast.classList.remove("top-24");
+            }, 3000);
+        }
+
+        // --- PROFILE MANAGEMENT ENGINE ---
+        async function loadProfileData() {
+            try {
+                if (!currentUser) {
+                    showToast("No user data available", "error");
+                    return;
+                }
+
+                // Load user profile from Firestore
+                const profileResult = await getUserProfile(currentUser.uid);
+                if (!profileResult.success) {
+                    showToast("Failed to load profile", "error");
+                    return;
+                }
+
+                const profile = profileResult.profile;
+                document.getElementById("profileUsername").innerText = profile.userName || "Unknown";
+                document.getElementById("profileStatus").innerText = profile.status || "Active";
+                
+                // Get wallet address
+                const walletAddr = await getWalletAddress(currentUser.uid);
+                if (walletAddr) {
+                    document.getElementById("profileWalletAddress").innerText = walletAddr;
+                }
+
+                // Fetch RPC balance
+                await refreshRpcBalance();
+
+            } catch (err) {
+                console.error('Error loading profile:', err);
+                showToast("Error loading profile data", "error");
+            }
+        }
+
+        async function refreshRpcBalance() {
+            try {
+                const walletAddr = await getWalletAddress(currentUser.uid);
+                if (!walletAddr) {
+                    showToast("Wallet address not found", "error");
+                    return;
+                }
+
+                const rpcConfig = await getRpcConfig();
+                if (!rpcConfig || !rpcConfig.url) {
+                    showToast("RPC configuration not available", "error");
+                    return;
+                }
+
+                const balance = await getBnbBalanceFromRpc(walletAddr, rpcConfig.url);
+                document.getElementById("profileRpcBalance").innerText = `${balance} BNB`;
+            } catch (err) {
+                console.error('Error refreshing balance:', err);
+                showToast("Failed to fetch balance", "error");
+            }
+        }
+
+        async function handleUpdateEmail() {
+            try {
+                const newEmail = document.getElementById("profileNewEmail").value.trim();
+                
+                if (!newEmail) {
+                    showToast("Please enter a new email", "error");
+                    return;
+                }
+
+                if (!newEmail.includes("@")) {
+                    showToast("Please enter a valid email", "error");
+                    return;
+                }
+
+                const result = await updateUserEmail(newEmail);
+                if (result.success) {
+                    document.getElementById("profileNewEmail").value = "";
+                    showToast("✅ Email updated successfully");
+                } else {
+                    showToast(result.error || "Failed to update email", "error");
+                }
+            } catch (err) {
+                console.error('Error updating email:', err);
+                showToast("Error updating email", "error");
+            }
+        }
+
+        async function handleUpdatePassword() {
+            try {
+                const newPassword = document.getElementById("profileNewPassword").value.trim();
+                const confirmPassword = document.getElementById("profileConfirmPassword").value.trim();
+                
+                if (!newPassword) {
+                    showToast("Please enter a password", "error");
+                    return;
+                }
+
+                if (newPassword !== confirmPassword) {
+                    showToast("Passwords do not match", "error");
+                    return;
+                }
+
+                if (newPassword.length < 6) {
+                    showToast("Password must be at least 6 characters", "error");
+                    return;
+                }
+
+                const result = await updateUserPassword(newPassword);
+                if (result.success) {
+                    document.getElementById("profileNewPassword").value = "";
+                    document.getElementById("profileConfirmPassword").value = "";
+                    showToast("✅ Password updated successfully");
+                } else {
+                    showToast(result.error || "Failed to update password", "error");
+                }
+            } catch (err) {
+                console.error('Error updating password:', err);
+                showToast("Error updating password", "error");
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const result = await logoutUser();
+                showToast("✅ Logged out successfully");
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1000);
+            } catch (err) {
+                console.error('Error logging out:', err);
+                showToast("Error logging out", "error");
+            }
+        }
+
+        // Expose to global scope
+        window.switchTab = switchTab;
+        window.initiatePurchaseFlow = initiatePurchaseFlow;
+        window.recalcPurchaseTotal = recalcPurchaseTotal;
+        window.executePurchase = executePurchase;
+        window.executeSend = executeSend;
+        window.openModal = openModal;
+        window.closeModal = closeModal;
+        window.copyAddress = copyAddress;
+        window.showToast = showToast;
+        window.loadProfileData = loadProfileData;
+        window.refreshRpcBalance = refreshRpcBalance;
+        window.handleUpdateEmail = handleUpdateEmail;
+        window.handleUpdatePassword = handleUpdatePassword;
+        window.handleLogout = handleLogout;
+        window.manualRefreshWalletBalance = manualRefreshWalletBalance;
+    </script>
+</body>
+</html>

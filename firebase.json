@@ -1,0 +1,27 @@
+{
+  "projectId": "your_firebase_project_id",
+  "public": {
+    "appId": "web3flasher",
+    "name": "W€B3flasher"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "*.md",
+      "node_modules/**",
+      ".env"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  }
+}

@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W€B3flasher - The Scrap Meme Token Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    
+    <!-- Pre-define functions to prevent "not defined" errors when onclick attributes are evaluated -->
+    <script>
+        window.scrollToAuth = (tab) => console.warn('scrollToAuth not ready yet');
+        window.toggleAuthTab = (tab) => console.warn('toggleAuthTab not ready yet');
+        window.handleAuthenticationAction = (e, type) => console.warn('handleAuthenticationAction not ready yet');
+    </script>
+    
+    <style>
+        :root[data-theme="dark"] {
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #0b1329 50%, #020617 100%);
+            --card-bg: rgba(15, 23, 42, 0.45);
+            --card-border: rgba(255, 255, 255, 0.07);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.15);
+        }
+        :root[data-theme="light"] {
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.7);
+            --card-border: rgba(0, 0, 0, 0.06);
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --accent: #0284c7;
+            --accent-glow: rgba(2, 132, 199, 0.1);
+        }
+
+        body {
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            transition: background 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body class="max-w-md mx-auto relative overflow-x-hidden min-h-vh flex flex-col justify-between shadow-2xl">
+
+    <header class="glass-panel sticky top-0 z-50 px-4 py-3.5 flex justify-between items-center rounded-b-2xl mx-2 mt-2 shadow-lg">
+        <div class="flex items-center gap-2">
+            <div class="p-2 bg-gradient-to-tr from-sky-500 to-blue-600 rounded-xl text-white shadow-md">
+                <i data-lucide="zap" class="w-5 h-5 animate-pulse"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white via-sky-200 to-sky-400">W€B3flasher</h1>
+                <p class="text-[9px] text-sky-400 font-mono tracking-widest uppercase">Scrap Yard Gateway</p>
+            </div>
+        </div>
+        
+        <button id="themeToggle" class="p-2.5 rounded-xl glass-panel text-slate-400 hover:text-sky-400 transition-all active:scale-95">
+            <i data-lucide="moon" id="themeIcon" class="w-4 h-4"></i>
+        </button>
+    </header>
+
+    <main class="px-4 pt-6 pb-12 flex-1 flex flex-col justify-center space-y-8">
+        
+        <section class="text-center space-y-3 px-2 py-4">
+            <span class="text-[10px] uppercase font-mono tracking-widest px-3 py-1 bg-sky-500/10 text-sky-400 rounded-full border border-sky-500/20">
+                BSC Network Native Settle
+            </span>
+            <h2 class="text-3xl font-black tracking-tight leading-none">
+                Turn Liquid BNB Into <br>
+                <span class="bg-clip-text text-transparent bg-gradient-to-r from-sky-400 to-blue-500">Scrap Meme Power</span>
+            </h2>
+            <p class="text-xs max-w-xs mx-auto leading-relaxed" style="color: var(--text-muted)">
+                The ultimate decentralized custodian exchange vault. Zero setup frictions, fixed admin asset values, instant multi-token scrap yard settlements.
+            </p>
+            <div class="pt-2 flex justify-center gap-3">
+                <button onclick="scrollToAuth('signin')" class="px-5 py-2.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded-xl transition-all shadow-md glow-effect active:scale-95">
+                    Launch Vault
+                </button>
+                <button onclick="scrollToAuth('signup')" class="px-5 py-2.5 glass-panel text-xs font-bold rounded-xl hover:bg-white/5 transition-all active:scale-95">
+                    Register Wallet
+                </button>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-2 gap-3">
+            <div class="glass-panel p-4 rounded-2xl space-y-1">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center mb-1"><i data-lucide="shield" class="w-4 h-4"></i></div>
+                <h4 class="text-xs font-bold">Custodial Protection</h4>
+                <p class="text-[10px]" style="color: var(--text-muted)">Securely automated backend vaulting layers.</p>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl space-y-1">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center mb-1"><i data-lucide="coins" class="w-4 h-4"></i></div>
+                <h4 class="text-xs font-bold">Fixed Settle Pools</h4>
+                <p class="text-[10px]" style="color: var(--text-muted)">Preset values guarded by real-time feeds.</p>
+            </div>
+        </section>
+
+        <section id="authAnchor" class="glass-panel rounded-3xl p-5 shadow-2xl relative border-white/10 glow-effect">
+            <div class="grid grid-cols-2 gap-1 p-1 bg-slate-950/40 rounded-xl mb-5">
+                <button onclick="toggleAuthTab('signin')" id="tabBtn-signin" class="py-2.5 rounded-lg text-xs font-black tracking-wide transition-all bg-sky-500 text-white">
+                    Sign In Vault
+                </button>
+                <button onclick="toggleAuthTab('signup')" id="tabBtn-signup" class="py-2.5 rounded-lg text-xs font-black tracking-wide transition-all text-slate-400 hover:text-white">
+                    Create Account
+                </button>
+            </div>
+
+            <form id="signInForm" onsubmit="handleAuthenticationAction(event, 'signin')" class="space-y-4">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block" style="color: var(--text-muted)">Access Email ID</label>
+                    <div class="relative">
+                        <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-3.5 text-slate-500"></i>
+                        <input id="loginEmail" type="email" required placeholder="name@domain.com" class="w-full bg-slate-950/30 text-white rounded-xl pl-9 pr-4 py-3 text-xs border border-white/10 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block" style="color: var(--text-muted)">Security Password</label>
+                    <div class="relative">
+                        <i data-lucide="lock" class="w-4 h-4 absolute left-3 top-3.5 text-slate-500"></i>
+                        <input id="loginPassword" type="password" required placeholder="••••••••" class="w-full bg-slate-950/30 text-white rounded-xl pl-9 pr-4 py-3 text-xs border border-white/10 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+                </div>
+                
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white text-xs font-bold tracking-wider transition-all shadow-md">
+                    Synchronize Secure Session
+                </button>
+            </form>
+
+            <form id="signUpForm" onsubmit="handleAuthenticationAction(event, 'signup')" class="space-y-4 hidden">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block" style="color: var(--text-muted)">Select Anonymous Tag Handle</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-3 top-3.5 text-slate-500"></i>
+                        <input type="text" required placeholder="User_99X" class="w-full bg-slate-950/30 text-white rounded-xl pl-9 pr-4 py-3 text-xs border border-white/10 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block" style="color: var(--text-muted)">Email Address</label>
+                    <div class="relative">
+                        <i data-lucide="mail" class="w-4 h-4 absolute left-3 top-3.5 text-slate-500"></i>
+                        <input type="email" required placeholder="anon@web3flasher.com" class="w-full bg-slate-950/30 text-white rounded-xl pl-9 pr-4 py-3 text-xs border border-white/10 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block" style="color: var(--text-muted)">Create Vault Password</label>
+                    <div class="relative">
+                        <i data-lucide="key-round" class="w-4 h-4 absolute left-3 top-3.5 text-slate-500"></i>
+                        <input type="password" required placeholder="••••••••" class="w-full bg-slate-950/30 text-white rounded-xl pl-9 pr-4 py-3 text-xs border border-white/10 focus:outline-none focus:border-sky-500 font-mono">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 text-white text-xs font-bold tracking-wider transition-all shadow-md">
+                    Generate Cryptographic Custody Address
+                </button>
+            </form>
+        </section>
+
+    </main>
+
+    <footer class="glass-panel mx-2 mb-2 p-5 rounded-2xl text-center space-y-3 border-t border-white/5">
+        <div class="flex justify-center items-center gap-4 text-xs font-mono opacity-60">
+            <a href="#" class="hover:text-sky-400 transition-colors">Ecosystem Rules</a>
+            <span class="text-white/10">•</span>
+            <a href="#" class="hover:text-sky-400 transition-colors">BSC Oracle API</a>
+            <span class="text-white/10">•</span>
+            <a href="#" class="hover:text-sky-400 transition-colors">Privacy Tags</a>
+        </div>
+        <p class="text-[10px] text-slate-500 tracking-wide font-mono">
+            &copy; 2026 W€B3flasher Labs Corp. Automated custodial pool clearing architecture.
+        </p>
+    </footer>
+
+    <div id="toast" class="fixed top-24 left-1/2 -translate-x-1/2 glass-panel border-sky-500/30 px-5 py-3 rounded-xl text-xs font-bold tracking-wide shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50 text-center text-sky-400">
+        Notification Alert Output Frame
+    </div>
+
+    <script type="module">
+        import { loginUser, registerUser, subscribeToAuthState, getUserById } from './firestore-service.js';
+        import { auth } from './firebase-config.js';
+
+        let currentUser = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            lucide.createIcons();
+            initThemeFramework();
+            initAuthStateListener();
+        });
+
+        // Listen to auth state changes
+        function initAuthStateListener() {
+            subscribeToAuthState((user) => {
+                currentUser = user;
+                if (user) {
+                    // User is logged in, check role and redirect
+                    checkUserRoleAndRedirect(user);
+                }
+            });
+        }
+
+        async function checkUserRoleAndRedirect(user) {
+            try {
+                // Read the user's role straight from Firestore (no backend API exists).
+                const userData = await getUserById(user.uid);
+                showToast("Authentication confirmed. Redirecting...");
+                setTimeout(() => {
+                    if (userData && userData.role === 'admin') {
+                        window.location.href = "admin.html";
+                    } else {
+                        window.location.href = "store.html";
+                    }
+                }, 1500);
+            } catch (error) {
+                console.error('Error checking user role:', error);
+                // Fallback redirect to store
+                setTimeout(() => {
+                    window.location.href = "store.html";
+                }, 1500);
+            }
+        }
+
+        // --- AUTH REGISTRATION INTERACTIVE SWITCH STRUCTS ---
+        function toggleAuthTab(activeTab) {
+            const formSignIn = document.getElementById("signInForm");
+            const formSignUp = document.getElementById("signUpForm");
+            const btnSignIn = document.getElementById("tabBtn-signin");
+            const btnSignUp = document.getElementById("tabBtn-signup");
+
+            if (activeTab === "signin") {
+                formSignIn.classList.remove("hidden");
+                formSignUp.classList.add("hidden");
+                btnSignIn.className = "py-2.5 rounded-lg text-xs font-black tracking-wide transition-all bg-sky-500 text-white shadow-sm";
+                btnSignUp.className = "py-2.5 rounded-lg text-xs font-black tracking-wide transition-all text-slate-400 hover:text-white";
+            } else {
+                formSignIn.classList.add("hidden");
+                formSignUp.classList.remove("hidden");
+                btnSignIn.className = "py-2.5 rounded-lg text-xs font-black tracking-wide transition-all text-slate-400 hover:text-white";
+                btnSignUp.className = "py-2.5 rounded-lg text-xs font-black tracking-wide transition-all bg-emerald-500 text-white shadow-sm";
+            }
+        }
+
+        function scrollToAuth(targetTab) {
+            toggleAuthTab(targetTab);
+            document.getElementById("authAnchor").scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        // --- FIREBASE AUTHENTICATION ACTION HANDLERS ---
+        async function handleAuthenticationAction(event, type) {
+            event.preventDefault();
+
+            if (type === "signin") {
+                const emailInput = document.getElementById("loginEmail").value.trim();
+                const passwordInput = document.getElementById("loginPassword").value;
+
+                if (!emailInput || !passwordInput) {
+                    showToast("Please enter both email and password.", "error");
+                    return;
+                }
+
+                showToast("Authenticating with Firebase...");
+                const result = await loginUser(emailInput, passwordInput);
+                
+                if (result.success) {
+                    showToast("Authentication confirmed. Redirecting...");
+                    // Wait for auth state listener to handle redirect
+                } else {
+                    showToast(result.error, "error");
+                }
+            } else {
+                const emailInput = document.querySelector('#signUpForm input[type="email"]').value.trim();
+                const passwordInput = document.querySelector('#signUpForm input[type="password"]').value;
+                const userNameInput = document.querySelector('#signUpForm input[type="text"]').value.trim();
+
+                if (!emailInput || !passwordInput || !userNameInput) {
+                    showToast("Please fill in all fields.", "error");
+                    return;
+                }
+
+                showToast("Creating account...");
+                const result = await registerUser(emailInput, passwordInput, userNameInput);
+                
+                if (result.success) {
+                    showToast("Account created! Redirecting to store...");
+                    setTimeout(() => {
+                        window.location.href = "store.html";
+                    }, 1800);
+                } else {
+                    showToast(result.error, "error");
+                }
+            }
+        }
+
+        // Expose functions globally
+        window.toggleAuthTab = toggleAuthTab;
+        window.scrollToAuth = scrollToAuth;
+        window.handleAuthenticationAction = handleAuthenticationAction;
+
+        // --- GLOBAL THEME UI INTERACTION MATRIX ---
+        function initThemeFramework() {
+            const curTheme = localStorage.getItem("landing_theme") || "dark";
+            document.documentElement.setAttribute("data-theme", curTheme);
+            adjustThemeUiVisualStates(curTheme);
+
+            document.getElementById("themeToggle").addEventListener("click", () => {
+                const target = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+                document.documentElement.setAttribute("data-theme", target);
+                localStorage.setItem("landing_theme", target);
+                adjustThemeUiVisualStates(target);
+            });
+        }
+
+        function adjustThemeUiVisualStates(theme) {
+            const icon = document.getElementById("themeIcon");
+            if (theme === "dark") {
+                icon.setAttribute("data-lucide", "sun");
+                icon.classList.remove("text-slate-400");
+                icon.classList.add("text-amber-400");
+            } else {
+                icon.setAttribute("data-lucide", "moon");
+                icon.classList.remove("text-amber-400");
+                icon.classList.add("text-slate-600");
+            }
+            lucide.createIcons();
+        }
+
+        function showToast(msg, type = "success") {
+            const toast = document.getElementById("toast");
+            toast.innerText = msg;
+            toast.style.borderColor = type === "error" ? "rgba(239, 68, 68, 0.4)" : "rgba(56, 189, 248, 0.4)";
+            toast.style.color = type === "error" ? "#f87171" : "#38bdf8";
+            
+            toast.classList.remove("opacity-0", "pointer-events-none");
+            toast.classList.add("top-28");
+
+            setTimeout(() => {
+                toast.classList.add("opacity-0", "pointer-events-none");
+                toast.classList.remove("top-28");
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
